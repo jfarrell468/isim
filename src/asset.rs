@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Asset {
     pub value: f64,
     cost_basis: f64,
