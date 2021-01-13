@@ -32,7 +32,7 @@ macro_rules! tbond {
 }
 
 #[rustfmt::skip]
-pub const DATA: [Tbond10; 93] = [
+pub const DATA: [Tbond10; 94] = [
     Tbond10 { year: 1927, rate: 0.0317 },
     Tbond10 { year: 1928, rate: 0.0345 },
     Tbond10 { year: 1929, rate: 0.0336 },
@@ -126,6 +126,7 @@ pub const DATA: [Tbond10; 93] = [
     Tbond10 { year: 2017, rate: 0.0241 },
     Tbond10 { year: 2018, rate: 0.0269 },
     Tbond10 { year: 2019, rate: 0.0192 },
+    Tbond10 { year: 2020, rate: 0.0093 },
 ];
 
 mod tbond_tests {

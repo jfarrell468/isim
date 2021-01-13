@@ -23,7 +23,7 @@ macro_rules! sp500 {
 }
 
 #[rustfmt::skip]
-pub const DATA: [Sp500; 93] = [
+pub const DATA: [Sp500; 94] = [
     Sp500 { year: 1927, price: 17.66, dividend: 17.66 * 0.035 },
     Sp500 { year: 1928, price: 24.35, dividend: 24.35 * 0.043 },
     Sp500 { year: 1929, price: 21.45, dividend: 21.45 * 0.041 },
@@ -116,7 +116,8 @@ pub const DATA: [Sp500; 93] = [
     Sp500 { year: 2016, price: 2238.83, dividend: 45.7 },
     Sp500 { year: 2017, price: 2673.61, dividend: 48.93 },
     Sp500 { year: 2018, price: 2506.85, dividend: 53.75 },
-    Sp500 { year: 2019, price: 3230.78, dividend: 58.8 },
+    Sp500 { year: 2019, price: 3230.78, dividend: 58.5 },
+    Sp500 { year: 2020, price: 3756.07, dividend: 56.7 },
 ];
 
 mod sp500_tests {
@@ -137,6 +138,6 @@ mod sp500_tests {
                 (100.0 * stonks.value).round() / 100.0
             );
         }
-        assert_eq!((100.0 * stonks.value).round() / 100.0, 502_417.21);
+        assert_eq!((100.0 * stonks.value).round() / 100.0, 502_371.39);
     }
 }
