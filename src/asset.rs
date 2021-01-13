@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub struct Asset {
     pub value: f64,
     cost_basis: f64,
@@ -8,13 +8,16 @@ pub struct Asset {
 
 #[derive(Debug)]
 pub struct AssetReturn {
-    pub cg: f64,  // Capital gains (long-term).
-    pub id: f64   // Interest and dividends.
+    pub cg: f64, // Capital gains (long-term).
+    pub id: f64, // Interest and dividends.
 }
 
 impl Asset {
     pub fn new(value: f64) -> Asset {
-        Asset { value, cost_basis: value }
+        Asset {
+            value,
+            cost_basis: value,
+        }
     }
     pub fn new_with_basis(value: f64, cost_basis: f64) -> Asset {
         Asset { value, cost_basis }
@@ -56,7 +59,7 @@ mod asset_tests {
     #[test]
     fn grow() {
         let mut asset = Asset::new(100.0);
-        assert_eq!(asset.grow(&AssetReturn{cg: 5.0, id: 1.0}), 1.0);
+        assert_eq!(asset.grow(&AssetReturn { cg: 5.0, id: 1.0 }), 1.0);
         assert_eq!(asset.value, 105.0);
         assert_eq!(asset.cost_basis, 100.0);
         assert_eq!(asset.capital_gains(), 5.0);

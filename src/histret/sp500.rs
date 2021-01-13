@@ -1,22 +1,28 @@
 use std::fmt::Debug;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Sp500 {
     year: i32,
     pub price: f64,
-    pub dividend: f64
+    pub dividend: f64,
 }
 
 #[macro_export]
 macro_rules! sp500 {
     ($e:expr) => {
         AssetReturn {
-            cg: 100.0*($crate::histret::sp500::DATA[$e-1927].price/crate::histret::sp500::DATA[$e-1928].price-1.0),
-            id: 100.0*(crate::histret::sp500::DATA[$e-1927].dividend/crate::histret::sp500::DATA[$e-1928].price)
+            cg: 100.0
+                * ($crate::histret::sp500::DATA[$e - 1927].price
+                    / crate::histret::sp500::DATA[$e - 1928].price
+                    - 1.0),
+            id: 100.0
+                * (crate::histret::sp500::DATA[$e - 1927].dividend
+                    / crate::histret::sp500::DATA[$e - 1928].price),
         }
     };
 }
 
+#[rustfmt::skip]
 pub const DATA: [Sp500; 93] = [
     Sp500 { year: 1927, price: 17.66, dividend: 17.66 * 0.035 },
     Sp500 { year: 1928, price: 24.35, dividend: 24.35 * 0.043 },
@@ -110,10 +116,11 @@ pub const DATA: [Sp500; 93] = [
     Sp500 { year: 2016, price: 2238.83, dividend: 45.7 },
     Sp500 { year: 2017, price: 2673.61, dividend: 48.93 },
     Sp500 { year: 2018, price: 2506.85, dividend: 53.75 },
-    Sp500 { year: 2019, price: 3230.78, dividend: 58.8 }
+    Sp500 { year: 2019, price: 3230.78, dividend: 58.8 },
 ];
 
 mod sp500_tests {
+    #[cfg(test)]
     use crate::asset::*;
 
     #[test]
@@ -124,8 +131,12 @@ mod sp500_tests {
             let is = stonks.grow(&ret);
             stonks.invest(is);
             println!("{:?}", ret);
-            println!("{} {}", (100.0 * (ret.cg+ret.id)).round()/100.0, (100.0 * stonks.value).round()/100.0);
+            println!(
+                "{} {}",
+                (100.0 * (ret.cg + ret.id)).round() / 100.0,
+                (100.0 * stonks.value).round() / 100.0
+            );
         }
-        assert_eq!((100.0 * stonks.value).round()/100.0, 502_417.21);
+        assert_eq!((100.0 * stonks.value).round() / 100.0, 502_417.21);
     }
 }

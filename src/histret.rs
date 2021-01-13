@@ -3,7 +3,7 @@ mod sp500;
 #[macro_use]
 mod tbond;
 
-use crate::asset::*;
+use crate::asset::AssetReturn;
 use std::fmt::Debug;
 
 #[derive(Debug)]
@@ -11,10 +11,11 @@ pub struct HistoricalYear {
     pub year: i32,
     pub stocks: AssetReturn,
     pub bonds: AssetReturn,
-    pub inflation: f64
+    pub inflation: f64,
 }
 
 // From http://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSPX.html
+#[rustfmt::skip]
 pub const RETURNS: [HistoricalYear; 92] = [
     HistoricalYear { year: 1928, stocks: sp500!(1928), bonds: tbond!(1928), inflation: -1.152  },
     HistoricalYear { year: 1929, stocks: sp500!(1929), bonds: tbond!(1929), inflation: 0.000   },
@@ -107,10 +108,13 @@ pub const RETURNS: [HistoricalYear; 92] = [
     HistoricalYear { year: 2016, stocks: sp500!(2016), bonds: tbond!(2016), inflation: 1.262   },
     HistoricalYear { year: 2017, stocks: sp500!(2017), bonds: tbond!(2017), inflation: 2.130   },
     HistoricalYear { year: 2018, stocks: sp500!(2018), bonds: tbond!(2018), inflation: 2.443   },
-    HistoricalYear { year: 2019, stocks: sp500!(2019), bonds: tbond!(2019), inflation: 2.290   }
+    HistoricalYear { year: 2019, stocks: sp500!(2019), bonds: tbond!(2019), inflation: 2.290   },
 ];
 
 mod historical_returns_tests {
+    #[cfg(test)]
+    use crate::asset::Asset;
+    #[cfg(test)]
     use crate::histret::*;
 
     #[test]
@@ -123,7 +127,7 @@ mod historical_returns_tests {
             let ib = bonds.grow(&RETURNS[i].bonds);
             bonds.invest(ib);
         }
-        assert_eq!((100.0 * stonks.value).round()/100.0, 502_417.21);
-        assert_eq!((100.0 * bonds.value).round()/100.0,  8_012.89);
+        assert_eq!((100.0 * stonks.value).round() / 100.0, 502_417.21);
+        assert_eq!((100.0 * bonds.value).round() / 100.0, 8_012.89);
     }
 }

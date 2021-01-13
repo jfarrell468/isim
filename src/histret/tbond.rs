@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Tbond10 {
     year: i32,
     pub rate: f64,
@@ -10,12 +10,28 @@ pub struct Tbond10 {
 macro_rules! tbond {
     ($e:expr) => {
         AssetReturn {
-            cg: 100.0*(($crate::histret::tbond::DATA[$e-1928].rate + ($crate::histret::tbond::DATA[$e-1927].rate-$crate::histret::tbond::DATA[$e-1928].rate)/((1.0 + $crate::histret::tbond::DATA[$e-1927].rate)*(1.0 + $crate::histret::tbond::DATA[$e-1927].rate)*(1.0 + $crate::histret::tbond::DATA[$e-1927].rate)*(1.0 + $crate::histret::tbond::DATA[$e-1927].rate)*(1.0 + $crate::histret::tbond::DATA[$e-1927].rate)*(1.0 + $crate::histret::tbond::DATA[$e-1927].rate)*(1.0 + $crate::histret::tbond::DATA[$e-1927].rate)*(1.0 + $crate::histret::tbond::DATA[$e-1927].rate)*(1.0 + $crate::histret::tbond::DATA[$e-1927].rate)*(1.0 + $crate::histret::tbond::DATA[$e-1927].rate)))/$crate::histret::tbond::DATA[$e-1927].rate-1.0),
-            id: 100.0*$crate::histret::tbond::DATA[$e-1928].rate
+            cg: 100.0
+                * (($crate::histret::tbond::DATA[$e - 1928].rate
+                    + ($crate::histret::tbond::DATA[$e - 1927].rate
+                        - $crate::histret::tbond::DATA[$e - 1928].rate)
+                        / ((1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)))
+                    / $crate::histret::tbond::DATA[$e - 1927].rate
+                    - 1.0),
+            id: 100.0 * $crate::histret::tbond::DATA[$e - 1928].rate,
         }
     };
 }
 
+#[rustfmt::skip]
 pub const DATA: [Tbond10; 93] = [
     Tbond10 { year: 1927, rate: 0.0317 },
     Tbond10 { year: 1928, rate: 0.0345 },
@@ -109,12 +125,12 @@ pub const DATA: [Tbond10; 93] = [
     Tbond10 { year: 2016, rate: 0.0245 },
     Tbond10 { year: 2017, rate: 0.0241 },
     Tbond10 { year: 2018, rate: 0.0269 },
-    Tbond10 { year: 2019, rate: 0.0192 }
+    Tbond10 { year: 2019, rate: 0.0192 },
 ];
 
 mod tbond_tests {
+    #[cfg(test)]
     use crate::asset::*;
-    use crate::histret::tbond::*;
 
     #[test]
     pub fn returns_1928_to_2019() {
@@ -124,14 +140,12 @@ mod tbond_tests {
             let is = bonds.grow(&ret);
             bonds.invest(is);
             println!("{:?}", ret);
-            println!("{:?}", AssetReturn {
-                id: 100.0*DATA[i-1928].rate,
-                cg: 100.0*((DATA[i-1928].rate + (DATA[i-1927].rate-DATA[i-1928].rate)/(1.0 + DATA[i-1927].rate).powi(10))/DATA[i-1927].rate-1.0) });
-            println!("{:?}", AssetReturn {
-                id: 100.0*DATA[i-1928].rate,
-                cg: 100.0*((DATA[i-1928].rate + (DATA[i-1927].rate-DATA[i-1928].rate)/((1.0 + DATA[i-1927].rate)*(1.0 + DATA[i-1927].rate)*(1.0 + DATA[i-1927].rate)*(1.0 + DATA[i-1927].rate)*(1.0 + DATA[i-1927].rate)*(1.0 + DATA[i-1927].rate)*(1.0 + DATA[i-1927].rate)*(1.0 + DATA[i-1927].rate)*(1.0 + DATA[i-1927].rate)*(1.0 + DATA[i-1927].rate)))/DATA[i-1927].rate-1.0) });
-            println!("{} {}", (100.0 * (ret.cg+ret.id)).round()/100.0, (100.0 * bonds.value).round()/100.0);
+            println!(
+                "{} {}",
+                (100.0 * (ret.cg + ret.id)).round() / 100.0,
+                (100.0 * bonds.value).round() / 100.0
+            );
         }
-        assert_eq!((100.0 * bonds.value).round()/100.0, 8_012.89);
+        assert_eq!((100.0 * bonds.value).round() / 100.0, 8_012.89);
     }
 }
