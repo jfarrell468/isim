@@ -3,6 +3,7 @@ mod asset;
 mod config;
 mod histret;
 mod scenario;
+mod tax;
 
 use serde_yaml;
 use std::fs;
