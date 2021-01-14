@@ -22,6 +22,7 @@ pub struct Scenario {
     year: usize,
     instances: Vec<Instance>,
     contributions: YearlyContribution,
+    expense_ratio: f64,
 }
 
 impl Scenario {
@@ -30,6 +31,7 @@ impl Scenario {
             year: 0,
             instances: Vec::with_capacity(RETURNS.len()),
             contributions: is.contributions,
+            expense_ratio: is.expense_ratio / 100.0,
         };
         let pre_tax = Account::from_allocation(&is.pre_tax);
         let roth = Account::from_allocation(&is.roth);
@@ -52,16 +54,16 @@ impl Scenario {
             // For now, discard the interest and dividends in the after-tax account.
             // This is because it is included implicitly in our estimate of
             // yearly contributions.
-            i.grow_and_reinvest(&RETURNS[self.year + i.start]);
+            i.grow_and_reinvest(&RETURNS[self.year + i.start], self.expense_ratio);
             i.contribute(&self.contributions);
-            i.inflation *= 1.0 + &RETURNS[self.year + i.start].inflation / 100.0;
+            i.inflation *= 1.0 + &RETURNS[self.year + i.start].inflation;
         }
         self.year += 1;
         self.len()
     }
     pub fn print_header(&mut self) {
-        println!("    -------------- Median --------------  ---- Pre-Tax ----  ----- Roth ------  --- After Tax ---");
-        println!("Year      Value  Bond%        CapG  Year       Value  Bond%       Value  Bond%       Value  Bond%    5th %ile Worst Years");
+        println!("    -------- Median --------  ---- Pre-Tax ----  ----- Roth ------  ------- After Tax ------");
+        println!("Year      Value  Bond%  Year       Value  Bond%       Value  Bond%       Value  Bond%    CG%    5th %ile Worst Years");
     }
     pub fn report(&mut self) {
         self.instances.sort_by(|a, b| {
@@ -71,11 +73,10 @@ impl Scenario {
         });
         let median = &self.instances[self.instances.len() / 2];
         let bad = &self.instances[self.instances.len() / 20];
-        println!("{:>3.0}{:>12}{:>6.1}%{:>12}{:>6.0}{:>12}{:>6.1}%{:>12}{:>6.0}%{:>12}{:>6.1}%{:>12}{:>5.0},{:>5.0},{:>5.0}",
+        println!("{:>3.0}{:>12}{:>6.1}%{:>6.0}{:>12}{:>6.1}%{:>12}{:>6.0}%{:>12}{:>6.1}%{:>6.1}%{:>12}{:>5.0},{:>5.0},{:>5.0}",
                  self.year,
                  cfmt(median.value() / median.inflation),
                  100.0 * median.bond_value() / median.value(),
-                 cfmt(median.capital_gains()),
                  RETURNS[median.start].year,
                  cfmt(median.pre_tax.value() / median.inflation),
                  median.pre_tax.bond_percent(),
@@ -83,6 +84,7 @@ impl Scenario {
                  median.roth.bond_percent(),
                  cfmt(median.after_tax.value() / median.inflation),
                  median.after_tax.bond_percent(),
+                 100.0 * median.after_tax.capital_gains() / median.after_tax.value(),
                  cfmt(bad.value() / bad.inflation),
                  RETURNS[self.instances[0].start].year,
                  RETURNS[self.instances[1].start].year,
@@ -94,10 +96,10 @@ impl Scenario {
 }
 
 impl Instance {
-    pub fn grow_and_reinvest(&mut self, r: &HistoricalYear) -> f64 {
-        self.pre_tax.grow_and_reinvest(r);
-        self.roth.grow_and_reinvest(r);
-        self.after_tax.grow(r)
+    pub fn grow_and_reinvest(&mut self, r: &HistoricalYear, e: f64) -> f64 {
+        self.pre_tax.grow_and_reinvest(r, e);
+        self.roth.grow_and_reinvest(r, e);
+        self.after_tax.grow(r, e)
     }
     pub fn contribute(&mut self, c: &YearlyContribution) {
         // Pre-tax contributions are 100% bonds.

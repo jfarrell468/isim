@@ -10,27 +10,27 @@ pub struct Tbond10 {
 macro_rules! tbond {
     ($e:expr) => {
         AssetReturn {
-            cg: 100.0
-                * (($crate::histret::tbond::DATA[$e - 1928].rate
-                    + ($crate::histret::tbond::DATA[$e - 1927].rate
-                        - $crate::histret::tbond::DATA[$e - 1928].rate)
-                        / ((1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
-                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
-                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
-                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
-                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
-                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
-                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
-                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
-                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
-                            * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)))
-                    / $crate::histret::tbond::DATA[$e - 1927].rate
-                    - 1.0),
-            id: 100.0 * $crate::histret::tbond::DATA[$e - 1928].rate,
+            cg: ($crate::histret::tbond::DATA[$e - 1928].rate
+                + ($crate::histret::tbond::DATA[$e - 1927].rate
+                    - $crate::histret::tbond::DATA[$e - 1928].rate)
+                    / ((1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                        * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                        * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                        * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                        * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                        * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                        * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                        * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                        * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)
+                        * (1.0 + $crate::histret::tbond::DATA[$e - 1927].rate)))
+                / $crate::histret::tbond::DATA[$e - 1927].rate
+                - 1.0,
+            id: $crate::histret::tbond::DATA[$e - 1928].rate,
         }
     };
 }
 
+// From http://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSPX.html
 #[rustfmt::skip]
 pub const DATA: [Tbond10; 94] = [
     Tbond10 { year: 1927, rate: 0.0317 },
@@ -138,7 +138,7 @@ mod tbond_tests {
         let mut bonds = Asset::new(100.0);
         for i in 1928..=2019 {
             let ret: AssetReturn = tbond!(i);
-            let is = bonds.grow(&ret);
+            let is = bonds.grow(&ret, 0.0);
             bonds.invest(is);
             println!("{:?}", ret);
             println!(

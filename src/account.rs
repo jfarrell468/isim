@@ -40,16 +40,16 @@ impl Account {
             None => Account::new(stocks, bonds),
         }
     }
-    pub fn grow(&mut self, returns: &HistoricalYear) -> f64 {
+    pub fn grow(&mut self, r: &HistoricalYear, e: f64) -> f64 {
         let mut id: f64 = 0.0;
-        id += self.stocks.grow(&returns.stocks);
-        id += self.bonds.grow(&returns.bonds);
+        id += self.stocks.grow(&r.stocks, e);
+        id += self.bonds.grow(&r.bonds, e);
         return id;
     }
-    pub fn grow_and_reinvest(&mut self, returns: &HistoricalYear) {
-        let s = self.stocks.grow(&returns.stocks);
+    pub fn grow_and_reinvest(&mut self, r: &HistoricalYear, e: f64) {
+        let s = self.stocks.grow(&r.stocks, e);
         self.stocks.invest(s);
-        let b = self.bonds.grow(&returns.bonds);
+        let b = self.bonds.grow(&r.bonds, e);
         self.bonds.invest(b);
     }
     pub fn invest(&mut self, s: f64, b: f64) {

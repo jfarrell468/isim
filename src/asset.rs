@@ -22,9 +22,10 @@ impl Asset {
     pub fn new_with_basis(value: f64, cost_basis: f64) -> Asset {
         Asset { value, cost_basis }
     }
-    pub fn grow(&mut self, returns: &AssetReturn) -> f64 {
-        let id = self.value * returns.id / 100.0;
-        self.value += self.value * returns.cg / 100.0;
+    pub fn grow(&mut self, r: &AssetReturn, e: f64) -> f64 {
+        let id = self.value * r.id;
+        self.value += self.value * r.cg;
+        self.value *= 1.0 - e;
         id
     }
     pub fn invest(&mut self, amt: f64) {
@@ -59,10 +60,19 @@ mod asset_tests {
     #[test]
     fn grow() {
         let mut asset = Asset::new(100.0);
-        assert_eq!(asset.grow(&AssetReturn { cg: 5.0, id: 1.0 }), 1.0);
+        assert_eq!(asset.grow(&AssetReturn { cg: 0.05, id: 0.01 }, 0.0), 1.0);
         assert_eq!(asset.value, 105.0);
         assert_eq!(asset.cost_basis, 100.0);
         assert_eq!(asset.capital_gains(), 5.0);
+    }
+
+    #[test]
+    fn grow_with_expense_ratio() {
+        let mut asset = Asset::new(100.0);
+        assert_eq!(asset.grow(&AssetReturn { cg: 0.1, id: 0.01 }, 0.01), 1.0);
+        assert_eq!(asset.value, 108.9);
+        assert_eq!(asset.cost_basis, 100.0);
+        assert_eq!((asset.capital_gains() * 100.0).round() / 100.0, 8.9);
     }
 
     #[test]

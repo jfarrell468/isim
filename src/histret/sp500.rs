@@ -11,17 +11,16 @@ pub struct Sp500 {
 macro_rules! sp500 {
     ($e:expr) => {
         AssetReturn {
-            cg: 100.0
-                * ($crate::histret::sp500::DATA[$e - 1927].price
-                    / crate::histret::sp500::DATA[$e - 1928].price
-                    - 1.0),
-            id: 100.0
-                * (crate::histret::sp500::DATA[$e - 1927].dividend
-                    / crate::histret::sp500::DATA[$e - 1928].price),
+            cg: $crate::histret::sp500::DATA[$e - 1927].price
+                / crate::histret::sp500::DATA[$e - 1928].price
+                - 1.0,
+            id: crate::histret::sp500::DATA[$e - 1927].dividend
+                / crate::histret::sp500::DATA[$e - 1928].price,
         }
     };
 }
 
+// From http://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/histretSPX.html
 #[rustfmt::skip]
 pub const DATA: [Sp500; 94] = [
     Sp500 { year: 1927, price: 17.66, dividend: 17.66 * 0.035 },
@@ -129,7 +128,7 @@ mod sp500_tests {
         let mut stonks = Asset::new(100.0);
         for i in 1928..=2019 {
             let ret: AssetReturn = sp500!(i);
-            let is = stonks.grow(&ret);
+            let is = stonks.grow(&ret, 0.0);
             stonks.invest(is);
             println!("{:?}", ret);
             println!(

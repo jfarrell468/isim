@@ -21,4 +21,5 @@ pub struct InitialState {
     pub roth: InitialAllocation,
     pub after_tax: InitialAllocation,
     pub contributions: YearlyContribution,
+    pub expense_ratio: f64,
 }
