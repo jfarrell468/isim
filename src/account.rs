@@ -1,5 +1,5 @@
 use crate::asset::Asset;
-use crate::config::InitialAllocation;
+use crate::config::{Allocation,InitialAllocation};
 use crate::histret::HistoricalYear;
 
 use std::fmt::Debug;
@@ -25,15 +25,15 @@ impl Account {
             bonds: Asset::new_with_basis(bonds, bonds_basis),
         }
     }
-    pub fn from_allocation(a: &InitialAllocation) -> Account {
-        assert!(a.balance >= 0.0);
-        assert!(a.bond_percent >= 0.0);
-        assert!(a.bond_percent <= 100.0);
+    pub fn from_initial_allocation(a: &InitialAllocation) -> Account {
+        assert!(a.allocation.value >= 0.0);
+        assert!(a.allocation.bond_percent >= 0.0);
+        assert!(a.allocation.bond_percent <= 100.0);
         if let Some(basis) = a.cost_basis {
             assert!(basis >= 0.0);
         }
-        let bonds = a.balance * a.bond_percent / 100.0;
-        let stocks = a.balance - bonds;
+        let bonds = a.allocation.value * a.allocation.bond_percent / 100.0;
+        let stocks = a.allocation.value - bonds;
         match a.cost_basis {
             // Allocate all capital gains to stocks.
             Some(basis) => Account::new_with_basis(stocks, basis, bonds, bonds),
@@ -55,6 +55,10 @@ impl Account {
     pub fn invest(&mut self, s: f64, b: f64) {
         self.stocks.invest(s);
         self.bonds.invest(b);
+    }
+    pub fn invest_allocation(&mut self, a: &Allocation) {
+        let bonds = a.value * a.bond_percent / 100.0;
+        self.invest(a.value - bonds, bonds);
     }
     pub fn capital_gains(&self) -> f64 {
         self.stocks.capital_gains() + self.bonds.capital_gains()

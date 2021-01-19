@@ -33,9 +33,9 @@ impl Scenario {
             contributions: is.contributions,
             expense_ratio: is.expense_ratio / 100.0,
         };
-        let pre_tax = Account::from_allocation(&is.pre_tax);
-        let roth = Account::from_allocation(&is.roth);
-        let after_tax = Account::from_allocation(&is.after_tax);
+        let pre_tax = Account::from_initial_allocation(&is.pre_tax);
+        let roth = Account::from_initial_allocation(&is.roth);
+        let after_tax = Account::from_initial_allocation(&is.after_tax);
         for i in 0..RETURNS.len() {
             s.instances.push(Instance {
                 start: i,
@@ -102,11 +102,9 @@ impl Instance {
         self.after_tax.grow(r, e)
     }
     pub fn contribute(&mut self, c: &YearlyContribution) {
-        // Pre-tax contributions are 100% bonds.
-        // Roth and after-tax are 100% stocks.
-        self.pre_tax.invest(0.0, c.pre_tax);
-        self.roth.invest(c.roth, 0.0);
-        self.after_tax.invest(c.after_tax, 0.0);
+        self.pre_tax.invest_allocation(&c.pre_tax);
+        self.roth.invest_allocation(&c.roth);
+        self.after_tax.invest_allocation(&c.after_tax);
     }
     pub fn value(&self) -> f64 {
         self.pre_tax.value() + self.roth.value() + self.after_tax.value()

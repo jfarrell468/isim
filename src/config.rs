@@ -3,16 +3,21 @@ use std::option::Option;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitialAllocation {
-    pub balance: f64,
-    pub bond_percent: f64,
+    pub allocation: Allocation,
     pub cost_basis: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct YearlyContribution {
-    pub pre_tax: f64,
-    pub roth: f64,
-    pub after_tax: f64,
+    pub pre_tax: Allocation,
+    pub roth: Allocation,
+    pub after_tax: Allocation,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Allocation {
+    pub value: f64,
+    pub bond_percent: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
