@@ -12,6 +12,13 @@ pub struct YearlyContribution {
     pub pre_tax: Allocation,
     pub roth: Allocation,
     pub after_tax: Allocation,
+    pub years: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WithdrawAfterTax {
+    pub yearly_spending: f64,
+    pub years: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -26,5 +33,57 @@ pub struct InitialState {
     pub roth: InitialAllocation,
     pub after_tax: InitialAllocation,
     pub contributions: YearlyContribution,
+    pub withdraw_after_tax: WithdrawAfterTax,
     pub expense_ratio: f64,
+    pub report: Vec<ReportField>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum AccountType {
+    Total,
+    PreTax,
+    Roth,
+    AfterTax,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Measure {
+    Median,
+    // TODO: FifthPercentile,
+    Worst,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum InflationAdjustment {
+    Real,
+    Nominal,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum ReportField {
+    YearsElapsed,
+    WorstYears,
+    Value(Measure, AccountType, InflationAdjustment),
+    BondPercent(AccountType),
+    CapGainsPercent,
+    StartingYear(Measure),
+    InterestAndDividends,
+    StocksSold,
+    CapitalGains,
+}
+
+impl ReportField {
+    pub fn title(&self) -> String {
+        match self {
+            ReportField::YearsElapsed => String::from("Year"),
+            ReportField::WorstYears => String::from("Worst Years"),
+            ReportField::CapGainsPercent => String::from("CG%"),
+            ReportField::BondPercent(a) => format!("Bond%,\n{:#?}", a),
+            ReportField::Value(_, _, _) => format!("{:#?}", self),
+            ReportField::StartingYear(m) => format!("Starting\nyear of\n{:#?}", m),
+            ReportField::InterestAndDividends => String::from("I&D"),
+            ReportField::StocksSold => String::from("Sold"),
+            ReportField::CapitalGains => String::from("Cap\nGains"),
+        }
+    }
 }

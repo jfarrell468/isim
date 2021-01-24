@@ -1,5 +1,5 @@
 use crate::asset::Asset;
-use crate::config::{Allocation,InitialAllocation};
+use crate::config::{Allocation, InitialAllocation};
 use crate::histret::HistoricalYear;
 
 use std::fmt::Debug;
@@ -66,7 +66,11 @@ impl Account {
     pub fn value(&self) -> f64 {
         self.stocks.value + self.bonds.value
     }
-    pub fn bond_percent(&self) -> f64 {
-        100.0 * self.bonds.value / self.value()
+    pub fn bond_fraction(&self) -> f64 {
+        self.bonds.value / self.value()
+    }
+    // Sell $a in stocks, preserving the same fraction of capital gains.
+    pub fn sell_stocks(&mut self, a: f64) {
+        self.stocks.sell_preserving_cg_ratio(a);
     }
 }

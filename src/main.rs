@@ -2,6 +2,7 @@ mod account;
 mod asset;
 mod config;
 mod histret;
+mod report;
 mod scenario;
 mod tax;
 
@@ -19,10 +20,5 @@ fn main() {
     .unwrap();
     //println!("{:#?}", config);
     let mut scenario = scenario::Scenario::new(config);
-    scenario.print_header();
-    scenario.report();
-    for _ in 0..10 {
-        scenario.next();
-        scenario.report();
-    }
+    scenario.run();
 }

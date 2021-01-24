@@ -10,3 +10,5 @@ edition = "2018"
 serde = { version = "^1.0", features = ["derive"] }
 serde_yaml = "*"
 num-format = "^0.4"
+cli-table = "^0.4"
+itertools = "^0.10"
