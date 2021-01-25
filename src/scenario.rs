@@ -72,6 +72,8 @@ impl Scenario {
             self.next();
             self.report.row(self.row());
         }
+    }
+    pub fn report(&mut self) {
         self.report.print();
     }
     fn next(&mut self) -> usize {

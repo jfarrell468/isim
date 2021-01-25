@@ -76,7 +76,7 @@ impl ReportField {
     pub fn title(&self) -> String {
         match self {
             ReportField::YearsElapsed => String::from("Year"),
-            ReportField::WorstYears => String::from("Worst Years"),
+            ReportField::WorstYears => String::from("Worst Starting Years"),
             ReportField::CapGainsPercent => String::from("CG%"),
             ReportField::BondPercent(a) => format!("Bond%,\n{:#?}", a),
             ReportField::Value(_, _, _) => format!("{:#?}", self),

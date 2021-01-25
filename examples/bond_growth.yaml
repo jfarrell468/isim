@@ -1,0 +1,34 @@
+# Real bond growth is about 1-2%
+pre_tax:
+  allocation:
+    value: 0
+    bond_percent: 0
+roth:
+  allocation:
+    value: 1000
+    bond_percent: 100
+after_tax:
+  allocation:
+    value: 0
+    bond_percent: 0
+contributions:
+  pre_tax: 
+    value: 0
+    bond_percent: 0
+  roth: 
+    value: 0
+    bond_percent: 0
+  after_tax: 
+    value: 0
+    bond_percent: 0
+  years: 20
+withdraw_after_tax:
+  yearly_spending: 0
+  years: 0
+expense_ratio: 0 # percent
+report:
+  - YearsElapsed
+  - Value:
+    - Median
+    - Total
+    - Real

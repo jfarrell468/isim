@@ -1,4 +1,4 @@
-use cli_table::format::{Border, HorizontalLine, Justify, Separator, VerticalLine};
+use cli_table::format::{Border, HorizontalLine, Separator, VerticalLine, Align};
 use cli_table::{print_stdout, Cell, Row, Table, TableStruct};
 use std::fmt::Debug;
 
@@ -26,7 +26,7 @@ impl Report {
     pub fn table(&mut self) -> TableStruct {
         let mut title: Vec<cli_table::CellStruct> = Vec::new();
         for f in &self.config {
-            title.push(f.title().cell().justify(Justify::Right));
+            title.push(f.title().cell().align(Align::Bottom));
         }
         std::mem::take(&mut self.rows)
             .table()

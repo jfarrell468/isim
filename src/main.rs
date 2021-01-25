@@ -1,10 +1,4 @@
-mod account;
-mod asset;
-mod config;
-mod histret;
-mod report;
-mod scenario;
-mod tax;
+use isim::scenario;
 
 use serde_yaml;
 use std::env;
@@ -21,4 +15,5 @@ fn main() {
     //println!("{:#?}", config);
     let mut scenario = scenario::Scenario::new(config);
     scenario.run();
+    scenario.report();
 }
