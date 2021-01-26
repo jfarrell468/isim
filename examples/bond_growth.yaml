@@ -1,14 +1,12 @@
 # Real bond growth is about 1-2%
-pre_tax:
-  allocation:
+initial_balance:
+  pre_tax:
     value: 0
     bond_percent: 0
-roth:
-  allocation:
+  roth:
     value: 1000
     bond_percent: 100
-after_tax:
-  allocation:
+  after_tax:
     value: 0
     bond_percent: 0
 contributions:

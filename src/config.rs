@@ -2,9 +2,11 @@ use serde::{Deserialize, Serialize};
 use std::option::Option;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct InitialAllocation {
-    pub allocation: Allocation,
-    pub cost_basis: Option<f64>,
+pub struct InitialBalance {
+    pub pre_tax: Allocation,
+    pub roth: Allocation,
+    pub after_tax: Allocation,
+    pub after_tax_cost_basis: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -29,9 +31,7 @@ pub struct Allocation {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitialState {
-    pub pre_tax: InitialAllocation,
-    pub roth: InitialAllocation,
-    pub after_tax: InitialAllocation,
+    pub initial_balance: InitialBalance,
     pub contributions: YearlyContribution,
     pub withdraw_after_tax: WithdrawAfterTax,
     pub expense_ratio: f64,
@@ -76,7 +76,7 @@ impl ReportField {
     pub fn title(&self) -> String {
         match self {
             ReportField::YearsElapsed => String::from("Year"),
-            ReportField::WorstYears => String::from("Worst Starting Years"),
+            ReportField::WorstYears => String::from("Worst Years"),
             ReportField::CapGainsPercent => String::from("CG%"),
             ReportField::BondPercent(a) => format!("Bond%,\n{:#?}", a),
             ReportField::Value(_, _, _) => format!("{:#?}", self),

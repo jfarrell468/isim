@@ -1,17 +1,14 @@
 # Real stock growth is about 6.5%
-pre_tax:
-  allocation:
+initial_balance:
+  pre_tax:
     value: 0
     bond_percent: 0
-roth:
-  allocation:
+  roth:
     value: 1000
-    bond_percent: 0.0
-after_tax:
-  allocation:
+    bond_percent: 0
+  after_tax:
     value: 0
     bond_percent: 0
-  cost_basis: 0
 contributions:
   pre_tax: 
     value: 0

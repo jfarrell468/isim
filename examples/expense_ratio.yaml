@@ -1,14 +1,12 @@
 # A 1% expense ratio lowers your real returns in the stock market from ~6.5% to ~5.5%
-pre_tax:
-  allocation:
+initial_balance:
+  pre_tax:
     value: 0
     bond_percent: 0
-roth:
-  allocation:
+  roth:
     value: 1000
-    bond_percent: 0.0
-after_tax:
-  allocation:
+    bond_percent: 0
+  after_tax:
     value: 0
     bond_percent: 0
 contributions:

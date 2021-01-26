@@ -1,5 +1,5 @@
 use crate::asset::Asset;
-use crate::config::{Allocation, InitialAllocation};
+use crate::config::Allocation;
 use crate::histret::HistoricalYear;
 
 use std::fmt::Debug;
@@ -25,20 +25,24 @@ impl Account {
             bonds: Asset::new_with_basis(bonds, bonds_basis),
         }
     }
-    pub fn from_initial_allocation(a: &InitialAllocation) -> Account {
-        assert!(a.allocation.value >= 0.0);
-        assert!(a.allocation.bond_percent >= 0.0);
-        assert!(a.allocation.bond_percent <= 100.0);
-        if let Some(basis) = a.cost_basis {
-            assert!(basis >= 0.0);
-        }
-        let bonds = a.allocation.value * a.allocation.bond_percent / 100.0;
-        let stocks = a.allocation.value - bonds;
-        match a.cost_basis {
-            // Allocate all capital gains to stocks.
-            Some(basis) => Account::new_with_basis(stocks, basis, bonds, bonds),
-            None => Account::new(stocks, bonds),
-        }
+    pub fn from_allocation(a: &Allocation) -> Account {
+        assert!(a.value >= 0.0);
+        assert!(a.bond_percent >= 0.0);
+        assert!(a.bond_percent <= 100.0);
+        let bonds = a.value * a.bond_percent / 100.0;
+        let stocks = a.value - bonds;
+        Account::new(stocks, bonds)
+    }
+    pub fn from_allocation_and_basis(a: &Allocation, basis: f64) -> Account {
+        assert!(a.value >= 0.0);
+        assert!(a.bond_percent >= 0.0);
+        assert!(a.bond_percent <= 100.0);
+        assert!(basis >= 0.0);
+        let bonds = a.value * a.bond_percent / 100.0;
+        let stocks = a.value - bonds;
+        // Allocate all capital gains to stocks.
+        assert!(stocks >= basis);
+        Account::new_with_basis(stocks, basis, bonds, bonds)
     }
     pub fn grow(&mut self, r: &HistoricalYear, e: f64) -> f64 {
         let mut id: f64 = 0.0;

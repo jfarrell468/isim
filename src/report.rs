@@ -1,4 +1,4 @@
-use cli_table::format::{Border, HorizontalLine, Separator, VerticalLine, Align};
+use cli_table::format::{Align, Border, HorizontalLine, Separator, VerticalLine};
 use cli_table::{print_stdout, Cell, Row, Table, TableStruct};
 use std::fmt::Debug;
 

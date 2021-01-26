@@ -48,9 +48,12 @@ impl Scenario {
             expense_ratio: is.expense_ratio / 100.0,
             report: Report::new(is.report),
         };
-        let pre_tax = Account::from_initial_allocation(&is.pre_tax);
-        let roth = Account::from_initial_allocation(&is.roth);
-        let after_tax = Account::from_initial_allocation(&is.after_tax);
+        let pre_tax = Account::from_allocation(&is.initial_balance.pre_tax);
+        let roth = Account::from_allocation(&is.initial_balance.roth);
+        let after_tax = Account::from_allocation_and_basis(
+            &is.initial_balance.after_tax,
+            is.initial_balance.after_tax_cost_basis.unwrap_or(0.0),
+        );
         for i in 0..RETURNS.len() {
             s.instances.push(Instance {
                 start: i,
