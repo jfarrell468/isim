@@ -13,6 +13,7 @@ fn main() {
     )
     .unwrap();
     //println!("{:#?}", config);
+    //println!("{}", serde_yaml::to_string(&config).unwrap());
     let mut scenario = scenario::Scenario::new(config);
     scenario.run();
     scenario.report();

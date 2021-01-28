@@ -9,20 +9,10 @@ initial_balance:
   after_tax:
     value: 0
     bond_percent: 0
-contributions:
-  pre_tax: 
-    value: 0
-    bond_percent: 0
-  roth: 
-    value: 0
-    bond_percent: 0
-  after_tax: 
-    value: 0
-    bond_percent: 0
+phases:
+- config:
+    Growth
   years: 20
-withdraw_after_tax:
-  yearly_spending: 0
-  years: 0
 expense_ratio: 0 # percent
 report:
   - YearsElapsed

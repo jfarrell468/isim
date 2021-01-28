@@ -10,17 +10,37 @@ pub struct InitialBalance {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct YearlyContribution {
-    pub pre_tax: Allocation,
-    pub roth: Allocation,
-    pub after_tax: Allocation,
+pub struct Phase {
+    pub config: PhaseType,
     pub years: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct WithdrawAfterTax {
-    pub yearly_spending: f64,
-    pub years: usize,
+pub enum PhaseType {
+    Accumulation(YearlyContribution),
+    Growth,
+    SimpleWithdrawAndRebalance(SimpleWithdrawal),
+    WithdrawTaxAware(TaxAwareWithdrawal),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SimpleWithdrawal {
+    pub amount: f64,
+    pub bond_percent: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TaxAwareWithdrawal {
+    pub living_expenses: f64,
+    pub birth_year: i32,
+    pub bond_percent: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct YearlyContribution {
+    pub pre_tax: Allocation,
+    pub roth: Allocation,
+    pub after_tax: Allocation,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -32,8 +52,7 @@ pub struct Allocation {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InitialState {
     pub initial_balance: InitialBalance,
-    pub contributions: YearlyContribution,
-    pub withdraw_after_tax: WithdrawAfterTax,
+    pub phases: Vec<Phase>,
     pub expense_ratio: f64,
     pub report: Vec<ReportField>,
 }

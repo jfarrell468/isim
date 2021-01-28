@@ -1,6 +1,6 @@
 use crate::account::Account;
 use crate::config::{
-    AccountType, InflationAdjustment, InitialState, Measure, ReportField, WithdrawAfterTax,
+    AccountType, InflationAdjustment, InitialState, Measure, Phase, PhaseType, ReportField,
     YearlyContribution,
 };
 use crate::histret::{HistoricalYear, RETURNS};
@@ -32,8 +32,7 @@ pub struct Instance {
 pub struct Scenario {
     year: usize,
     instances: Vec<Instance>,
-    contribution_phase: YearlyContribution,
-    withdraw_after_tax_phase: WithdrawAfterTax,
+    phases: Vec<Phase>,
     expense_ratio: f64,
     report: Report,
 }
@@ -43,8 +42,7 @@ impl Scenario {
         let mut s = Scenario {
             year: 0,
             instances: Vec::with_capacity(RETURNS.len()),
-            contribution_phase: is.contributions,
-            withdraw_after_tax_phase: is.withdraw_after_tax,
+            phases: is.phases,
             expense_ratio: is.expense_ratio / 100.0,
             report: Report::new(is.report),
         };
@@ -70,42 +68,51 @@ impl Scenario {
     }
     pub fn run(&mut self) {
         self.report.row(self.row());
-        let y = self.contribution_phase.years + self.withdraw_after_tax_phase.years;
-        for _ in 0..y {
-            self.next();
-            self.report.row(self.row());
+        for i in 0..self.phases.len() {
+            for _ in 0..self.phases[i].years {
+                self.next(i);
+                self.report.row(self.row());
+            }
         }
     }
     pub fn report(&mut self) {
         self.report.print();
     }
-    fn next(&mut self) -> usize {
+    fn next(&mut self, i: usize) -> usize {
+        let c = &self.phases[i].config;
         let y = self.year;
         self.instances.retain(|x| x.start + y < RETURNS.len());
         for i in &mut self.instances {
-            // For now, discard the interest and dividends in the after-tax account.
-            // This is because it is included implicitly in our estimate of
-            // yearly contributions.
-            let id = i.grow_and_reinvest(&RETURNS[self.year + i.start], self.expense_ratio);
-            if y < self.contribution_phase.years {
-                i.contribute(&self.contribution_phase);
-            } else {
-                // We should really withdraw at the start of the year. But we
-                // don't know what our interest and dividends will be, so we can't
-                // calculate taxes.
-                // TODO: Add support for cash savings account.
-                i.withdraw_after_tax(&self.withdraw_after_tax_phase, id);
-                // TODO: Calculate failure rate.
+            match c {
+                PhaseType::Accumulation(contributions) => {
+                    i.grow_and_reinvest(&RETURNS[self.year + i.start], self.expense_ratio);
+                    // For now, discard the interest and dividends in the after-tax account.
+                    // This is because it is included implicitly in our estimate of
+                    // yearly contributions.
+                    i.contribute(contributions);
+                }
+                PhaseType::Growth => {
+                    i.grow_and_reinvest(&RETURNS[self.year + i.start], self.expense_ratio);
+                }
+                PhaseType::SimpleWithdrawAndRebalance(_) => {
+                    i.grow_and_reinvest(&RETURNS[self.year + i.start], self.expense_ratio);
+                }
+                PhaseType::WithdrawTaxAware(w) => {
+                    let id = i.grow_and_reinvest(&RETURNS[self.year + i.start], self.expense_ratio);
+                    // We should really withdraw at the start of the year. But we
+                    // don't know what our interest and dividends will be, so we can't
+                    // calculate taxes.
+                    // TODO: Add support for cash savings account.
+                    i.withdraw_after_tax(w.living_expenses, id);
+                    // TODO: Calculate failure rate.
+                }
             }
             i.inflation *= 1.0 + &RETURNS[self.year + i.start].inflation;
         }
         self.year += 1;
-        self.instances.sort_by(|a, b| {
-            (a.value() / a.inflation)
-                .partial_cmp(&(b.value() / b.inflation))
-                .unwrap()
-        });
-        self.len()
+        self.instances
+            .sort_by(|a, b| (a.real_value()).partial_cmp(&b.real_value()).unwrap());
+        self.instances.len()
     }
     fn row(&self) -> Vec<cli_table::CellStruct> {
         let mut r: Vec<cli_table::CellStruct> = Vec::new();
@@ -166,9 +173,6 @@ impl Scenario {
         }
         r
     }
-    fn len(&self) -> usize {
-        self.instances.len()
-    }
     pub fn worst_starting_years(&self) -> [i32; 3] {
         [
             self.instances[0].starting_year(),
@@ -185,6 +189,9 @@ impl Scenario {
     pub fn worst_instance(&self) -> &Instance {
         &self.instances[0]
     }
+    pub fn length_years(&self) -> usize {
+        self.phases.iter().map(|x| x.years).sum()
+    }
 }
 
 impl Instance {
@@ -199,9 +206,9 @@ impl Instance {
         self.roth.invest_allocation(&c.roth);
         self.after_tax.invest_allocation(&c.after_tax);
     }
-    pub fn withdraw_after_tax(&mut self, w: &WithdrawAfterTax, id: f64) {
+    pub fn withdraw_after_tax(&mut self, living_expenses: f64, id: f64) {
         let sell = how_much_to_sell(
-            w.yearly_spending,
+            living_expenses,
             id / self.inflation,
             self.after_tax.capital_gains() / self.after_tax.value(),
         );
@@ -214,6 +221,9 @@ impl Instance {
     }
     pub fn bond_value(&self) -> f64 {
         self.pre_tax.bonds.value + self.roth.bonds.value + self.after_tax.bonds.value
+    }
+    pub fn real_value(&self) -> f64 {
+        self.value() / self.inflation
     }
     pub fn capital_gains(&self) -> f64 {
         self.after_tax.capital_gains()

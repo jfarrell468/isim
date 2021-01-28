@@ -1,12 +1,19 @@
-use isim::scenario;
+use isim::scenario::Scenario;
 
 use serde_yaml;
 use std::env;
 use std::fs;
 use std::path;
 
+macro_rules! assert_eq_decimal_places {
+    ($left:expr, $right:expr, $precision:expr $(,)?) => {
+        let x = 10.0_f64.powi($precision);
+        assert_eq!(($left * x).round() / x, ($right * x).round() / x);
+    };
+}
+
 #[cfg(test)]
-fn run_example(name: &str) {
+fn run_example(name: &str) -> Scenario {
     let config = path::Path::new(env::var("CARGO_MANIFEST_DIR").unwrap().as_str())
         .join("examples")
         .join(name);
@@ -17,21 +24,46 @@ fn run_example(name: &str) {
     )
     .unwrap();
     println!("{:#?}", config);
-    let mut scenario = scenario::Scenario::new(config);
+    let mut scenario = Scenario::new(config);
     scenario.run();
+    scenario
 }
 
 #[test]
 fn bond_growth() {
-    run_example("bond_growth.yaml")
+    let scenario = run_example("bond_growth.yaml");
+    assert_eq!(scenario.median_instance().real_value().round(), 1244.0);
+    assert_eq!(scenario.length_years(), 20);
+    assert_eq_decimal_places!(
+        (scenario.median_instance().real_value() / 1000.0)
+            .powf(1.0 / (scenario.length_years() as f64)),
+        1.011,
+        3
+    );
 }
 
 #[test]
 fn expense_ratio() {
-    run_example("expense_ratio.yaml")
+    let scenario = run_example("expense_ratio.yaml");
+    assert_eq!(scenario.median_instance().real_value().round(), 3235.0);
+    assert_eq!(scenario.length_years(), 20);
+    assert_eq_decimal_places!(
+        (scenario.median_instance().real_value() / 1000.0)
+            .powf(1.0 / (scenario.length_years() as f64)),
+        1.06,
+        3
+    );
 }
 
 #[test]
 fn stock_growth() {
-    run_example("stock_growth.yaml")
+    let scenario = run_example("stock_growth.yaml");
+    assert_eq!(scenario.median_instance().real_value().round(), 3915.0);
+    assert_eq!(scenario.length_years(), 20);
+    assert_eq_decimal_places!(
+        (scenario.median_instance().real_value() / 1000.0)
+            .powf(1.0 / (scenario.length_years() as f64)),
+        1.071,
+        3
+    );
 }
