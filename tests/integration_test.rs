@@ -1,3 +1,4 @@
+use isim::config::InitialState;
 use isim::scenario::Scenario;
 
 use serde_yaml;
@@ -13,7 +14,7 @@ macro_rules! assert_eq_decimal_places {
 }
 
 #[cfg(test)]
-fn run_example(name: &str) -> Scenario {
+fn config(name: &str) -> InitialState {
     let config = path::Path::new(env::var("CARGO_MANIFEST_DIR").unwrap().as_str())
         .join("examples")
         .join(name);
@@ -24,14 +25,14 @@ fn run_example(name: &str) -> Scenario {
     )
     .unwrap();
     println!("{:#?}", config);
-    let mut scenario = Scenario::new(config);
-    scenario.run();
-    scenario
+    config
 }
 
 #[test]
 fn bond_growth() {
-    let scenario = run_example("bond_growth.yaml");
+    let config = config("bond_growth.yaml");
+    let mut scenario = Scenario::new(&config);
+    scenario.run();
     assert_eq!(scenario.median_instance().real_value().round(), 1244.0);
     assert_eq!(scenario.length_years(), 20);
     assert_eq_decimal_places!(
@@ -44,7 +45,9 @@ fn bond_growth() {
 
 #[test]
 fn expense_ratio() {
-    let scenario = run_example("expense_ratio.yaml");
+    let config = config("expense_ratio.yaml");
+    let mut scenario = Scenario::new(&config);
+    scenario.run();
     assert_eq!(scenario.median_instance().real_value().round(), 3235.0);
     assert_eq!(scenario.length_years(), 20);
     assert_eq_decimal_places!(
@@ -57,7 +60,9 @@ fn expense_ratio() {
 
 #[test]
 fn stock_growth() {
-    let scenario = run_example("stock_growth.yaml");
+    let config = config("stock_growth.yaml");
+    let mut scenario = Scenario::new(&config);
+    scenario.run();
     assert_eq!(scenario.median_instance().real_value().round(), 3915.0);
     assert_eq!(scenario.length_years(), 20);
     assert_eq_decimal_places!(

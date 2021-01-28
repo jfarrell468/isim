@@ -29,22 +29,22 @@ pub struct Instance {
 // TODO: pub enum TaxStrategy { Taxed(Account), Untaxed(Account) }
 
 #[derive(Debug)]
-pub struct Scenario {
+pub struct Scenario<'a> {
     year: usize,
     instances: Vec<Instance>,
-    phases: Vec<Phase>,
+    phases: &'a Vec<Phase>,
     expense_ratio: f64,
-    report: Report,
+    report: Report<'a>,
 }
 
-impl Scenario {
-    pub fn new(is: InitialState) -> Scenario {
+impl Scenario<'_> {
+    pub fn new(is: &InitialState) -> Scenario {
         let mut s = Scenario {
             year: 0,
             instances: Vec::with_capacity(RETURNS.len()),
-            phases: is.phases,
+            phases: &is.phases,
             expense_ratio: is.expense_ratio / 100.0,
-            report: Report::new(is.report),
+            report: Report::new(&is.report),
         };
         let pre_tax = Account::from_allocation(&is.initial_balance.pre_tax);
         let roth = Account::from_allocation(&is.initial_balance.roth);
@@ -94,8 +94,23 @@ impl Scenario {
                 PhaseType::Growth => {
                     i.grow_and_reinvest(&RETURNS[self.year + i.start], self.expense_ratio);
                 }
-                PhaseType::SimpleWithdrawAndRebalance(_) => {
+                PhaseType::SimpleWithdrawAndRebalance(w) => {
+                    let total_sales = w.amount * i.inflation;
+                    let bond_sales = total_sales * w.bond_percent / 100.0;
+                    i.roth.bonds.sell_preserving_cg_ratio(bond_sales);
+                    i.roth
+                        .stocks
+                        .sell_preserving_cg_ratio(total_sales - bond_sales);
                     i.grow_and_reinvest(&RETURNS[self.year + i.start], self.expense_ratio);
+                    let bond_target = i.roth.value() * w.bond_percent / 100.0;
+                    let bond_sales = i.roth.bonds.value - bond_target;
+                    if bond_sales > 0.0 {
+                        i.roth.bonds.sell_preserving_cg_ratio(bond_sales);
+                        i.roth.stocks.invest(bond_sales);
+                    } else {
+                        i.roth.stocks.sell_preserving_cg_ratio(-bond_sales);
+                        i.roth.bonds.invest(-bond_sales);
+                    }
                 }
                 PhaseType::WithdrawTaxAware(w) => {
                     let id = i.grow_and_reinvest(&RETURNS[self.year + i.start], self.expense_ratio);
@@ -116,7 +131,7 @@ impl Scenario {
     }
     fn row(&self) -> Vec<cli_table::CellStruct> {
         let mut r: Vec<cli_table::CellStruct> = Vec::new();
-        for f in &self.report.config {
+        for f in self.report.config {
             r.push(match f {
                 ReportField::YearsElapsed => self.years_elapsed().cell(),
                 ReportField::WorstYears => join(&self.worst_starting_years(), ", ").cell(),
@@ -169,6 +184,7 @@ impl Scenario {
                 ReportField::CapitalGains => {
                     cfmt(self.median_instance().cg / self.median_instance().inflation).cell()
                 }
+                ReportField::SuccessRate => pfmt(self.success_ratio()).cell(),
             });
         }
         r
@@ -191,6 +207,10 @@ impl Scenario {
     }
     pub fn length_years(&self) -> usize {
         self.phases.iter().map(|x| x.years).sum()
+    }
+    pub fn success_ratio(&self) -> f64 {
+        self.instances.iter().filter(|x| x.value() > 0.0).count() as f64
+            / self.instances.len() as f64
     }
 }
 

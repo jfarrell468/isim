@@ -89,6 +89,7 @@ pub enum ReportField {
     InterestAndDividends,
     StocksSold,
     CapitalGains,
+    SuccessRate,
 }
 
 impl ReportField {
@@ -103,6 +104,7 @@ impl ReportField {
             ReportField::InterestAndDividends => String::from("I&D"),
             ReportField::StocksSold => String::from("Sold"),
             ReportField::CapitalGains => String::from("Cap\nGains"),
+            ReportField::SuccessRate => String::from("Success\nrate"),
         }
     }
 }

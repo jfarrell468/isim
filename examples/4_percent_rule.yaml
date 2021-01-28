@@ -1,0 +1,30 @@
+initial_balance:
+  pre_tax:
+    value: 0
+    bond_percent: 0
+  roth:
+    value: 1000
+    bond_percent: 50
+  after_tax:
+    value: 0
+    bond_percent: 0
+phases:
+- config:
+    SimpleWithdrawAndRebalance:
+      amount: 40
+      bond_percent: 50
+  years: 30
+expense_ratio: 0.025 # percent
+report:
+- YearsElapsed
+- Value:
+  - Median
+  - Total
+  - Real
+- BondPercent: Roth
+- Value:
+  - Worst
+  - Total
+  - Real
+- SuccessRate
+- WorstYears

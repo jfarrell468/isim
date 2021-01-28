@@ -1,6 +1,6 @@
 mod account;
 mod asset;
-mod config;
+pub mod config;
 mod histret;
 mod report;
 mod rmd;
