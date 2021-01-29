@@ -1,3 +1,5 @@
+// Historic prices and dividends for S&P500.
+
 use std::fmt::Debug;
 
 #[derive(Debug)]

@@ -47,13 +47,13 @@ impl Account {
     pub fn grow(&mut self, r: &HistoricalYear, e: f64) -> f64 {
         let mut id: f64 = 0.0;
         id += self.stocks.grow(&r.stocks, e);
-        id += self.bonds.grow(&r.bonds, e);
+        id += self.bonds.grow(&r.tbonds, e);
         return id;
     }
     pub fn grow_and_reinvest(&mut self, r: &HistoricalYear, e: f64) {
         let s = self.stocks.grow(&r.stocks, e);
         self.stocks.invest(s);
-        let b = self.bonds.grow(&r.bonds, e);
+        let b = self.bonds.grow(&r.tbonds, e);
         self.bonds.invest(b);
     }
     pub fn invest(&mut self, s: f64, b: f64) {

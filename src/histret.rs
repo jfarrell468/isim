@@ -1,9 +1,9 @@
 #[macro_use]
 mod sp500;
-#[macro_use]
 mod tbond;
 #[macro_use]
 mod inflation;
+mod aaabond;
 
 use crate::asset::AssetReturn;
 use std::fmt::Debug;
@@ -12,7 +12,8 @@ use std::fmt::Debug;
 pub struct HistoricalYear {
     pub year: i32,
     pub stocks: AssetReturn,
-    pub bonds: AssetReturn,
+    pub tbonds: AssetReturn,
+    pub aaabonds: AssetReturn,
     pub inflation: f64,
 }
 
@@ -21,8 +22,43 @@ macro_rules! hy {
         HistoricalYear {
             year: $e,
             stocks: sp500!($e),
-            bonds: tbond!($e),
+            tbonds: bond_return_10y!($e, tbond::DATA),
+            aaabonds: bond_return_10y!($e, aaabond::DATA),
             inflation: inflation!($e),
+        }
+    };
+}
+
+#[derive(Debug)]
+pub struct BondRate {
+    year: i32,
+    pub rate: f64,
+}
+
+// Explanation from http://www.stern.nyu.edu/~adamodar/pc/datasets/histretSP.xls:
+// "To compute the return on a constant maturity bond, I add two components - the promised coupon at
+// the start of the year and the price change due to interest rate changes.
+// The return on the 10-year bond for 1928 = 3.17% (Coupon rate promised at the end of 1927) - Price
+// change on a bond with a coupon rate of 3.17%, when the interest rate goes to 3.45%."
+#[macro_export]
+macro_rules! bond_return_10y {
+    ($e:expr, $data:expr) => {
+        AssetReturn {
+            cg: ($data[$e - 1928].rate
+                + ($data[$e - 1927].rate - $data[$e - 1928].rate)
+                    / ((1.0 + $data[$e - 1927].rate)
+                        * (1.0 + $data[$e - 1927].rate)
+                        * (1.0 + $data[$e - 1927].rate)
+                        * (1.0 + $data[$e - 1927].rate)
+                        * (1.0 + $data[$e - 1927].rate)
+                        * (1.0 + $data[$e - 1927].rate)
+                        * (1.0 + $data[$e - 1927].rate)
+                        * (1.0 + $data[$e - 1927].rate)
+                        * (1.0 + $data[$e - 1927].rate)
+                        * (1.0 + $data[$e - 1927].rate)))
+                / $data[$e - 1927].rate
+                - 1.0,
+            id: $data[$e - 1928].rate,
         }
     };
 }
@@ -60,14 +96,18 @@ mod historical_returns_tests {
     #[test]
     pub fn real_returns_1928_to_2020() {
         let mut stonks = Asset::new(100.0);
-        let mut bonds = Asset::new(100.0);
+        let mut tbonds = Asset::new(100.0);
+        let mut cbonds = Asset::new(100.0);
         for i in 0..93 {
             let is = stonks.grow(&RETURNS[i].stocks, 0.0);
             stonks.invest(is);
-            let ib = bonds.grow(&RETURNS[i].bonds, 0.0);
-            bonds.invest(ib);
+            let ib = tbonds.grow(&RETURNS[i].tbonds, 0.0);
+            tbonds.invest(ib);
+            let ic = cbonds.grow(&RETURNS[i].aaabonds, 0.0);
+            cbonds.invest(ic);
         }
         assert_eq!((100.0 * stonks.value).round() / 100.0, 592_868.15);
-        assert_eq!((100.0 * bonds.value).round() / 100.0, 8_920.90);
+        assert_eq!((100.0 * tbonds.value).round() / 100.0, 8_920.90);
+        assert_eq!((100.0 * cbonds.value).round() / 100.0, 19_858.51);
     }
 }
