@@ -14,21 +14,24 @@ pub struct AssetReturn {
 
 impl Asset {
     pub fn new(value: f64) -> Asset {
-        Asset {
-            value,
-            cost_basis: value,
-        }
+        Asset::new_with_basis(value, value)
     }
     pub fn new_with_basis(value: f64, cost_basis: f64) -> Asset {
+        assert!(value >= 0.0);
+        assert!(cost_basis >= 0.0);
+        assert!(cost_basis <= value);
         Asset { value, cost_basis }
     }
     pub fn grow(&mut self, r: &AssetReturn, e: f64) -> f64 {
+        assert!(r.id >= 0.0);
         let id = self.value * r.id;
         self.value += self.value * r.cg;
+        // TODO: How does expense ratio affect capital gains?
         self.value *= 1.0 - e;
         id
     }
     pub fn invest(&mut self, amt: f64) {
+        assert!(amt >= 0.0);
         self.value += amt;
         self.cost_basis += amt;
     }
@@ -36,12 +39,19 @@ impl Asset {
         self.value - self.cost_basis
     }
     pub fn capital_gains_ratio(&self) -> f64 {
-        self.capital_gains() / self.value
+        if self.value > 0.0 {
+            self.capital_gains() / self.value
+        } else {
+            0.0
+        }
     }
-    pub fn sell_preserving_cg_ratio(&mut self, a: f64) {
+    pub fn sell_preserving_cg_ratio(&mut self, a: f64) -> f64 {
+        assert!(a >= 0.0);
+        assert!(a <= self.value);
         let cg_ratio = self.capital_gains_ratio();
         self.value -= a;
-        self.cost_basis = self.value * cg_ratio;
+        self.cost_basis = self.value * (1.0-cg_ratio);
+        a * cg_ratio
     }
 }
 
@@ -63,6 +73,15 @@ mod asset_tests {
         assert_eq!(asset.value, 100.0);
         assert_eq!(asset.cost_basis, 50.0);
         assert_eq!(asset.capital_gains(), 50.0);
+    }
+
+    #[test]
+    fn capital_gains_ratio() {
+        let asset = Asset::new_with_basis(5.0, 1.0);
+        assert_eq!(asset.capital_gains_ratio(), 0.8);
+
+        let asset = Asset::new_with_basis(0.0, 0.0);
+        assert_eq!(asset.capital_gains_ratio(), 0.0);
     }
 
     #[test]
@@ -96,8 +115,14 @@ mod asset_tests {
     fn sell_preserving_cg_ratio() {
         let mut asset = Asset::new_with_basis(100.0, 50.0);
         assert_eq!(asset.capital_gains_ratio(), 0.5);
-        asset.sell_preserving_cg_ratio(10.0);
+        assert_eq!(asset.sell_preserving_cg_ratio(10.0), 5.0);
         assert_eq!(asset.value, 90.0);
         assert_eq!(asset.capital_gains_ratio(), 0.5);
+
+        let mut asset = Asset::new_with_basis(100.0, 100.0);
+        assert_eq!(asset.capital_gains_ratio(), 0.0);
+        assert_eq!(asset.sell_preserving_cg_ratio(10.0), 0.0);
+        assert_eq!(asset.value, 90.0);
+        assert_eq!(asset.capital_gains_ratio(), 0.0);
     }
 }

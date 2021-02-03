@@ -1,17 +1,11 @@
-use isim::config::InitialState;
+use isim::config::{AccountType, InitialState};
 use isim::scenario::Scenario;
+use isim::assert_eq_decimal_places;
 
 use serde_yaml;
 use std::env;
 use std::fs;
 use std::path;
-
-macro_rules! assert_eq_decimal_places {
-    ($left:expr, $right:expr, $precision:expr $(,)?) => {
-        let x = 10.0_f64.powi($precision);
-        assert_eq!(($left * x).round() / x, ($right * x).round() / x);
-    };
-}
 
 #[cfg(test)]
 fn config(name: &str) -> InitialState {
@@ -33,11 +27,13 @@ fn bond_growth() {
     let config = config("bond_growth.yaml");
     let mut scenario = Scenario::new(&config);
     scenario.run();
-    assert_eq!(scenario.median_instance().real_value().round(), 1244.0);
+    let rv = scenario
+        .median_instance()
+        .inflation_adjusted(scenario.median_instance().value(&AccountType::Total));
+    assert_eq!(rv.round(), 1244.0);
     assert_eq!(scenario.length_years(), 20);
     assert_eq_decimal_places!(
-        (scenario.median_instance().real_value() / 1000.0)
-            .powf(1.0 / (scenario.length_years() as f64)),
+        (rv / 1000.0).powf(1.0 / (scenario.length_years() as f64)),
         1.011,
         3
     );
@@ -48,11 +44,13 @@ fn expense_ratio() {
     let config = config("expense_ratio.yaml");
     let mut scenario = Scenario::new(&config);
     scenario.run();
-    assert_eq!(scenario.median_instance().real_value().round(), 3235.0);
+    let rv = scenario
+        .median_instance()
+        .inflation_adjusted(scenario.median_instance().value(&AccountType::Total));
+    assert_eq!(rv.round(), 3235.0);
     assert_eq!(scenario.length_years(), 20);
     assert_eq_decimal_places!(
-        (scenario.median_instance().real_value() / 1000.0)
-            .powf(1.0 / (scenario.length_years() as f64)),
+        (rv / 1000.0).powf(1.0 / (scenario.length_years() as f64)),
         1.06,
         3
     );
@@ -63,12 +61,21 @@ fn stock_growth() {
     let config = config("stock_growth.yaml");
     let mut scenario = Scenario::new(&config);
     scenario.run();
-    assert_eq!(scenario.median_instance().real_value().round(), 3915.0);
+    let rv = scenario
+        .median_instance()
+        .inflation_adjusted(scenario.median_instance().value(&AccountType::Total));
+    assert_eq!(rv.round(), 3915.0);
     assert_eq!(scenario.length_years(), 20);
     assert_eq_decimal_places!(
-        (scenario.median_instance().real_value() / 1000.0)
-            .powf(1.0 / (scenario.length_years() as f64)),
+        (rv / 1000.0).powf(1.0 / (scenario.length_years() as f64)),
         1.071,
         3
     );
+}
+
+#[test]
+fn four_percent_rule() {
+    let config = config("4_percent_rule.yaml");
+    let mut scenario = Scenario::new(&config);
+    scenario.run();
 }

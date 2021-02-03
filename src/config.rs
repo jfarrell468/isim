@@ -88,8 +88,14 @@ pub enum ReportField {
     StartingYear(Measure),
     InterestAndDividends,
     StocksSold,
+    StocksBought,
     CapitalGains,
     SuccessRate,
+    RequiredMinimumDistribution,
+    Taxes,
+    Cash,
+    ExpensesDoubleCheck,
+    TaxRate,
 }
 
 impl ReportField {
@@ -103,8 +109,14 @@ impl ReportField {
             ReportField::StartingYear(m) => format!("Starting\nyear of\n{:#?}", m),
             ReportField::InterestAndDividends => String::from("I&D"),
             ReportField::StocksSold => String::from("Sold"),
+            ReportField::StocksBought => String::from("Bought"),
             ReportField::CapitalGains => String::from("Cap\nGains"),
             ReportField::SuccessRate => String::from("Success\nrate"),
+            ReportField::RequiredMinimumDistribution => String::from("RMD"),
+            ReportField::Taxes => String::from("Taxes"),
+            ReportField::Cash => String::from("Cash"),
+            ReportField::ExpensesDoubleCheck => String::from("Calculated\nExpenses"),
+            ReportField::TaxRate => String::from("Tax\nrate"),
         }
     }
 }

@@ -14,10 +14,7 @@ pub struct Account {
 
 impl Account {
     pub fn new(stocks: f64, bonds: f64) -> Account {
-        Account {
-            stocks: Asset::new(stocks),
-            bonds: Asset::new(bonds),
-        }
+        Account::new_with_basis(stocks, 0.0, bonds, 0.0)
     }
     pub fn new_with_basis(stocks: f64, stocks_basis: f64, bonds: f64, bonds_basis: f64) -> Account {
         Account {
@@ -26,12 +23,7 @@ impl Account {
         }
     }
     pub fn from_allocation(a: &Allocation) -> Account {
-        assert!(a.value >= 0.0);
-        assert!(a.bond_percent >= 0.0);
-        assert!(a.bond_percent <= 100.0);
-        let bonds = a.value * a.bond_percent / 100.0;
-        let stocks = a.value - bonds;
-        Account::new(stocks, bonds)
+        Account::from_allocation_and_basis(a, 0.0)
     }
     pub fn from_allocation_and_basis(a: &Allocation, basis: f64) -> Account {
         assert!(a.value >= 0.0);
@@ -44,37 +36,249 @@ impl Account {
         assert!(stocks >= basis);
         Account::new_with_basis(stocks, basis, bonds, bonds)
     }
-    pub fn grow(&mut self, r: &HistoricalYear, e: f64) -> f64 {
-        let mut id: f64 = 0.0;
-        id += self.stocks.grow(&r.stocks, e);
-        id += self.bonds.grow(&r.tbonds, e);
-        return id;
-    }
-    pub fn grow_and_reinvest(&mut self, r: &HistoricalYear, e: f64) {
-        let s = self.stocks.grow(&r.stocks, e);
-        self.stocks.invest(s);
-        let b = self.bonds.grow(&r.tbonds, e);
-        self.bonds.invest(b);
-    }
-    pub fn invest(&mut self, s: f64, b: f64) {
-        self.stocks.invest(s);
-        self.bonds.invest(b);
-    }
-    pub fn invest_allocation(&mut self, a: &Allocation) {
-        let bonds = a.value * a.bond_percent / 100.0;
-        self.invest(a.value - bonds, bonds);
-    }
-    pub fn capital_gains(&self) -> f64 {
-        self.stocks.capital_gains() + self.bonds.capital_gains()
-    }
+
+    // Accessors.
+
     pub fn value(&self) -> f64 {
         self.stocks.value + self.bonds.value
     }
     pub fn bond_fraction(&self) -> f64 {
         self.bonds.value / self.value()
     }
-    // Sell $a in stocks, preserving the same fraction of capital gains.
-    pub fn sell_stocks(&mut self, a: f64) {
-        self.stocks.sell_preserving_cg_ratio(a);
+    pub fn capital_gains(&self) -> f64 {
+        self.stocks.capital_gains() + self.bonds.capital_gains()
+    }
+
+    // Market growth methods. All return interest and dividends.
+
+    // TODO: Only pass AssetReturns for stocks and bonds.
+    pub fn grow(&mut self, r: &HistoricalYear, e: f64) -> f64 {
+        let mut id: f64 = 0.0;
+        id += self.stocks.grow(&r.stocks, e);
+        id += self.bonds.grow(&r.tbonds, e);
+        id
+    }
+    pub fn grow_and_reinvest(&mut self, r: &HistoricalYear, e: f64) -> f64 {
+        let s = self.stocks.grow(&r.stocks, e);
+        self.stocks.invest(s);
+        let b = self.bonds.grow(&r.tbonds, e);
+        self.bonds.invest(b);
+        s + b
+    }
+
+    // Methods for investing new funds.
+
+    pub fn invest(&mut self, s: f64, b: f64) {
+        self.stocks.invest(s);
+        self.bonds.invest(b);
+    }
+    pub fn invest_preserving_allocation(&mut self, a: f64) {
+        self.invest_allocation(&Allocation {
+            value: a,
+            bond_percent: 100.0 * self.bond_fraction(),
+        })
+    }
+    pub fn invest_allocation(&mut self, a: &Allocation) {
+        let bonds = a.value * a.bond_percent / 100.0;
+        self.invest(a.value - bonds, bonds);
+    }
+
+    // Methods for selling assets. Returns realized capital gains.
+
+    // Sell stocks and bonds, preserving the same overall asset allocation in the account.
+    pub fn sell_preserving_allocation(&mut self, a: f64) -> f64 {
+        assert!(a >= 0.0);
+        assert!(a <= self.value());
+        let bond_sales = a * self.bond_fraction();
+        self.bonds.sell_preserving_cg_ratio(bond_sales)
+            + self.stocks.sell_preserving_cg_ratio(a - bond_sales)
+    }
+    // Sell $a in stocks, preserving the same fraction of capital gains. If not enough stocks,
+    // sell some bonds as well.
+    pub fn sell_stocks_first(&mut self, a: f64) -> f64 {
+        assert!(a >= 0.0);
+        assert!(a <= self.value());
+        let stock_sales = self.stocks.value.min(a);
+        self.stocks.sell_preserving_cg_ratio(stock_sales)
+            + self.bonds.sell_preserving_cg_ratio(a - stock_sales)
+    }
+    pub fn sell_bonds_first(&mut self, a: f64) -> f64 {
+        assert!(a >= 0.0);
+        assert!(a <= self.value());
+        let bond_sales = self.bonds.value.min(a);
+        self.bonds.sell_preserving_cg_ratio(bond_sales)
+            + self.stocks.sell_preserving_cg_ratio(a - bond_sales)
+    }
+}
+
+#[cfg(test)]
+mod account_tests {
+    use crate::account::*;
+    #[cfg(test)]
+    use crate::asset::AssetReturn;
+    #[cfg(test)]
+    use crate::assert_eq_cents;
+
+    #[test]
+    fn new() {
+        let account = Account::new(3.0, 4.0);
+        assert_eq!(account.stocks.value, 3.0);
+        assert_eq!(account.bonds.value, 4.0);
+        assert_eq!(account.bond_fraction(), 4.0/7.0);
+    }
+
+    #[test]
+    fn new_with_basis() {
+        let account = Account::new_with_basis(3.0, 1.0,4.0, 1.0);
+        assert_eq!(account.stocks.value, 3.0);
+        assert_eq!(account.stocks.capital_gains(), 2.0);
+        assert_eq!(account.bonds.value, 4.0);
+        assert_eq!(account.bonds.capital_gains(), 3.0);
+        assert_eq!(account.bond_fraction(), 4.0/7.0);
+    }
+
+    #[test]
+    fn from_allocation() {
+        let account = Account::from_allocation(&Allocation { value: 10.0, bond_percent: 20.0 });
+        assert_eq!(account.stocks.value, 8.0);
+        assert_eq!(account.bonds.value, 2.0);
+    }
+
+    #[test]
+    fn from_allocation_and_basis() {
+        let account = Account::from_allocation_and_basis(&Allocation { value: 10.0, bond_percent: 20.0 }, 4.0);
+        assert_eq!(account.stocks.value, 8.0);
+        assert_eq!(account.stocks.capital_gains(), 4.0);
+        assert_eq!(account.bonds.value, 2.0);
+        assert_eq!(account.bonds.capital_gains(), 0.0);
+    }
+
+    #[test]
+    fn grow() {
+        let mut account = Account::new_with_basis(100.0, 100.0, 100.0, 100.0);
+        let id = account.grow(&HistoricalYear{
+            year: 123,
+            stocks: AssetReturn { cg: 0.01, id: 0.02 },
+            tbonds: AssetReturn { cg: 0.03, id: 0.04 },
+            aaabonds: AssetReturn { cg: 0.0, id: 0.0 },
+            inflation: 0.0
+        }, 0.0);
+        assert_eq!(id, 6.0);
+        assert_eq!(account.value(), 204.0);
+        assert_eq!(account.capital_gains(), 4.0);
+    }
+
+    #[test]
+    fn grow_expense_ratio() {
+        let mut account = Account::new_with_basis(100.0, 100.0, 100.0, 100.0);
+        let id = account.grow(&HistoricalYear{
+            year: 123,
+            stocks: AssetReturn { cg: 0.01, id: 0.02 },
+            tbonds: AssetReturn { cg: 0.03, id: 0.04 },
+            aaabonds: AssetReturn { cg: 0.0, id: 0.0 },
+            inflation: 0.0
+        }, 0.01);
+        assert_eq!(id, 6.0);
+        assert_eq_cents!(account.value(), 204.0 * 0.99);
+        assert_eq_cents!(account.capital_gains(), 204.0 * 0.99 - 200.0);
+    }
+
+    #[test]
+    fn grow_and_reinvest() {
+        let mut account = Account::new_with_basis(100.0, 100.0, 100.0, 100.0);
+        let id = account.grow_and_reinvest(&HistoricalYear{
+            year: 123,
+            stocks: AssetReturn { cg: 0.01, id: 0.02 },
+            tbonds: AssetReturn { cg: 0.03, id: 0.04 },
+            aaabonds: AssetReturn { cg: 0.0, id: 0.0 },
+            inflation: 0.0
+        }, 0.0);
+        assert_eq!(id, 6.0);
+        assert_eq!(account.value(), 210.0);
+        assert_eq!(account.capital_gains(), 4.0);
+    }
+
+    #[test]
+    fn grow_and_reinvest_expense_ratio() {
+        let mut account = Account::new_with_basis(100.0, 100.0, 100.0, 100.0);
+        let id = account.grow_and_reinvest(&HistoricalYear{
+            year: 123,
+            stocks: AssetReturn { cg: 0.01, id: 0.02 },
+            tbonds: AssetReturn { cg: 0.03, id: 0.04 },
+            aaabonds: AssetReturn { cg: 0.0, id: 0.0 },
+            inflation: 0.0
+        }, 0.01);
+        assert_eq!(id, 6.0);
+        assert_eq_cents!(account.value(), 204.0 * 0.99 + 6.0);
+        assert_eq_cents!(account.capital_gains(), 204.0 * 0.99 - 200.0);
+    }
+
+    #[test]
+    fn invest() {
+        let mut account = Account::new_with_basis(3.0, 1.0,4.0, 1.0);
+        let cg = account.capital_gains();
+        account.invest(1.0, 2.0);
+        assert_eq!(account.value(), 10.0);
+        assert_eq!(account.capital_gains(), cg);
+    }
+
+    #[test]
+    fn invest_preserving_allocation() {
+        let mut account = Account::new_with_basis(3.0, 1.0,4.0, 1.0);
+        let cg = account.capital_gains();
+        let bf = account.bond_fraction();
+        account.invest_preserving_allocation(7.0);
+        assert_eq!(account.value(), 14.0);
+        assert_eq!(account.capital_gains(), cg);
+        assert_eq!(account.bond_fraction(), bf);
+    }
+
+    #[test]
+    fn invest_allocation() {
+        let mut account = Account::new_with_basis(100.0, 17.0,100.0, 23.0);
+        let cg = account.capital_gains();
+        account.invest_allocation(&Allocation{ value: 5.0, bond_percent: 20.0 });
+        assert_eq!(account.value(), 205.0);
+        assert_eq!(account.stocks.value, 104.0);
+        assert_eq!(account.bonds.value, 101.0);
+        assert_eq!(account.capital_gains(), cg);
+    }
+
+    #[test]
+    fn sell_preserving_allocation() {
+        let mut account = Account::new_with_basis(80.0, 40.0,20.0, 20.0);
+        let bf = account.bond_fraction();
+        assert_eq!(bf, 0.20);
+        let initial_cg = account.capital_gains();
+        assert_eq!(initial_cg, 40.0);
+        let realized_cg = account.sell_preserving_allocation(10.0);
+        assert_eq!(realized_cg, 4.0);
+        assert_eq!(account.bond_fraction(), bf);
+        assert_eq!(account.value(), 90.0);
+        assert_eq!(account.stocks.value, 72.0);
+        assert_eq!(account.bonds.value, 18.0);
+        assert_eq!(account.capital_gains(), initial_cg - realized_cg);
+    }
+
+    #[test]
+    fn sell_stocks_first() {
+        let mut account = Account::new(100.0, 100.0);
+        account.sell_stocks_first(50.0);
+        assert_eq!(account.stocks.value, 50.0);
+        assert_eq!(account.bonds.value, 100.0);
+        account.sell_stocks_first(100.0);
+        assert_eq!(account.stocks.value, 0.0);
+        assert_eq!(account.bonds.value, 50.0);
+    }
+
+    #[test]
+    fn sell_bonds_first() {
+        let mut account = Account::new(100.0, 100.0);
+        account.sell_bonds_first(50.0);
+        assert_eq!(account.stocks.value, 100.0);
+        assert_eq!(account.bonds.value, 50.0);
+        account.sell_bonds_first(100.0);
+        assert_eq!(account.stocks.value, 50.0);
+        assert_eq!(account.bonds.value, 0.0);
     }
 }
