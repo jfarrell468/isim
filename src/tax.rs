@@ -3,8 +3,20 @@
 pub fn tax(i: f64, cg: f64) -> f64 {
     let ill = illinois(i, cg);
     let fed = federal(i, cg);
-    assert!(ill >= 0.0, "illinois tax = {}, income = {}, cg = {}", ill, i, cg);
-    assert!(fed >= 0.0, "federal tax = {}, income = {}, cg = {}", fed, i, cg);
+    assert!(
+        ill >= 0.0,
+        "illinois tax = {}, income = {}, cg = {}",
+        ill,
+        i,
+        cg
+    );
+    assert!(
+        fed >= 0.0,
+        "federal tax = {}, income = {}, cg = {}",
+        fed,
+        i,
+        cg
+    );
     ill + fed
 }
 
@@ -21,9 +33,27 @@ fn federal(i: f64, cg: f64) -> f64 {
     let fi = fed_income(i);
     let fcg = fed_cg(i, cg);
     let niit = fed_niit(i, cg);
-    assert!(fi >= 0.0, "federal income tax = {}, income = {}, cg = {}", fi, i, cg);
-    assert!(fcg >= 0.0, "federal cap gains tax = {}, income = {}, cg = {}", fcg, i, cg);
-    assert!(niit >= 0.0, "fed niit = {}, income = {}, cg = {}", niit, i, cg);
+    assert!(
+        fi >= 0.0,
+        "federal income tax = {}, income = {}, cg = {}",
+        fi,
+        i,
+        cg
+    );
+    assert!(
+        fcg >= 0.0,
+        "federal cap gains tax = {}, income = {}, cg = {}",
+        fcg,
+        i,
+        cg
+    );
+    assert!(
+        niit >= 0.0,
+        "fed niit = {}, income = {}, cg = {}",
+        niit,
+        i,
+        cg
+    );
     fi + fcg + niit
 }
 
@@ -127,7 +157,14 @@ fn fed_niit(i: f64, cg: f64) -> f64 {
 // capital gains.
 pub fn how_much_to_sell(l: f64, i: f64, cg_ratio: f64) -> f64 {
     let mut guess = (l - i).max(0.0);
-    assert!(guess >= 0.0, "guess = {}, l = {}, i = {}, cg_ratio = {}", guess, l, i, cg_ratio);
+    assert!(
+        guess >= 0.0,
+        "guess = {}, l = {}, i = {}, cg_ratio = {}",
+        guess,
+        l,
+        i,
+        cg_ratio
+    );
     while i + guess - tax(i, guess * cg_ratio) < l {
         // Linear search in $1k increments. We can do better, but this is OK for now.
         guess += 1000.0

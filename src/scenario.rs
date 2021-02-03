@@ -67,8 +67,8 @@ impl Scenario<'_> {
         }
         self.year += 1;
         self.instances.sort_by(|a, b| {
-            (a.inflation_adjusted(a.value(&AccountType::Total)))
-                .partial_cmp(&b.inflation_adjusted(b.value(&AccountType::Total)))
+            (a.inflation_adjusted(a.value()))
+                .partial_cmp(&b.inflation_adjusted(b.value()))
                 .unwrap()
         });
         self.instances.len()
@@ -87,7 +87,12 @@ impl Scenario<'_> {
                         Measure::Median => self.median_instance(),
                         Measure::Worst => self.worst_instance(),
                     };
-                    let v = i.value(a);
+                    let v = match a {
+                        AccountType::Total => i.value(),
+                        AccountType::PreTax => i.value_by_account().pre_tax,
+                        AccountType::Roth => i.value_by_account().roth,
+                        AccountType::AfterTax => i.value_by_account().after_tax,
+                    };
                     cfmt(match inf {
                         InflationAdjustment::Real => i.inflation_adjusted(v),
                         InflationAdjustment::Nominal => v,
@@ -95,12 +100,21 @@ impl Scenario<'_> {
                     .cell()
                     .justify(Justify::Right)
                 }
-                ReportField::BondPercent(a) => pfmt(self.median_instance().bond_fraction(a))
-                    .cell()
-                    .justify(Justify::Right),
+                ReportField::BondPercent(a) => pfmt(match a {
+                    AccountType::Total => self.median_instance().bond_fraction(),
+                    AccountType::PreTax => {
+                        self.median_instance().bond_fraction_by_account().pre_tax
+                    }
+                    AccountType::Roth => self.median_instance().bond_fraction_by_account().roth,
+                    AccountType::AfterTax => {
+                        self.median_instance().bond_fraction_by_account().after_tax
+                    }
+                })
+                .cell()
+                .justify(Justify::Right),
                 ReportField::CapGainsPercent => {
                     let i = self.median_instance();
-                    pfmt(i.capital_gains() / i.value(&AccountType::AfterTax))
+                    pfmt(i.capital_gains() / i.value())
                         .cell()
                         .justify(Justify::Right)
                 }
@@ -179,7 +193,7 @@ impl Scenario<'_> {
     pub fn success_ratio(&self) -> f64 {
         self.instances
             .iter()
-            .filter(|x| x.value(&AccountType::Total) > 0.0)
+            .filter(|x| x.value() > 0.0)
             .count() as f64
             / self.instances.len() as f64
     }

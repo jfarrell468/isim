@@ -1,6 +1,6 @@
-use isim::config::{AccountType, InitialState};
-use isim::scenario::Scenario;
 use isim::assert_eq_decimal_places;
+use isim::config::InitialState;
+use isim::scenario::Scenario;
 
 use serde_yaml;
 use std::env;
@@ -29,7 +29,7 @@ fn bond_growth() {
     scenario.run();
     let rv = scenario
         .median_instance()
-        .inflation_adjusted(scenario.median_instance().value(&AccountType::Total));
+        .inflation_adjusted(scenario.median_instance().value());
     assert_eq!(rv.round(), 1244.0);
     assert_eq!(scenario.length_years(), 20);
     assert_eq_decimal_places!(
@@ -46,7 +46,7 @@ fn expense_ratio() {
     scenario.run();
     let rv = scenario
         .median_instance()
-        .inflation_adjusted(scenario.median_instance().value(&AccountType::Total));
+        .inflation_adjusted(scenario.median_instance().value());
     assert_eq!(rv.round(), 3235.0);
     assert_eq!(scenario.length_years(), 20);
     assert_eq_decimal_places!(
@@ -63,7 +63,7 @@ fn stock_growth() {
     scenario.run();
     let rv = scenario
         .median_instance()
-        .inflation_adjusted(scenario.median_instance().value(&AccountType::Total));
+        .inflation_adjusted(scenario.median_instance().value());
     assert_eq!(rv.round(), 3915.0);
     assert_eq!(scenario.length_years(), 20);
     assert_eq_decimal_places!(

@@ -22,4 +22,3 @@ macro_rules! assert_eq_cents {
         $crate::assert_eq_decimal_places!($left, $right, 2)
     };
 }
-
