@@ -47,7 +47,12 @@ impl Asset {
     }
     pub fn sell_preserving_cg_ratio(&mut self, a: f64) -> f64 {
         assert!(a >= 0.0);
-        assert!(a <= self.value, "Trying to sell {} but only have {}", a, self.value);
+        assert!(
+            a <= self.value,
+            "Trying to sell {} but only have {}",
+            a,
+            self.value
+        );
         let cg_ratio = self.capital_gains_ratio();
         self.value -= a;
         self.cost_basis = self.value * (1.0 - cg_ratio);

@@ -135,8 +135,11 @@ impl Account {
         assert!(b <= 1.0);
         let bond_goal = (self.value() - a) * b;
         let stock_goal = self.value() - a - bond_goal;
-        self.stocks.sell_preserving_cg_ratio((self.stocks.value - stock_goal).min(a).max(0.0))
-            + self.bonds.sell_preserving_cg_ratio((self.bonds.value - bond_goal).min(a).max(0.0))
+        self.stocks
+            .sell_preserving_cg_ratio((self.stocks.value - stock_goal).min(a).max(0.0))
+            + self
+                .bonds
+                .sell_preserving_cg_ratio((self.bonds.value - bond_goal).min(a).max(0.0))
     }
 
     // Rebalance to a bond fraction of b. Returns realized capital gains.
@@ -346,7 +349,7 @@ mod account_tests {
         let realized_cg = account.sell_with_goal_allocation(20.0, 1.0);
         assert_eq!(account.value(), 180.0);
         assert_eq!(account.capital_gains(), cg - realized_cg);
-        assert_eq!(account.bond_fraction(), 100.0/180.0);
+        assert_eq!(account.bond_fraction(), 100.0 / 180.0);
         assert_eq!(realized_cg, 10.0);
     }
 
@@ -357,7 +360,7 @@ mod account_tests {
         let realized_cg = account.sell_with_goal_allocation(20.0, 0.0);
         assert_eq!(account.value(), 180.0);
         assert_eq!(account.capital_gains(), cg - realized_cg);
-        assert_eq!(account.bond_fraction(), 80.0/180.0);
+        assert_eq!(account.bond_fraction(), 80.0 / 180.0);
         assert_eq!(realized_cg, 2.0);
     }
 

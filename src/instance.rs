@@ -141,7 +141,8 @@ impl Instance {
                     self.roth.stocks.value = 0.0;
                     self.roth.bonds.value = 0.0;
                 } else {
-                    self.roth.sell_with_goal_allocation(total_sales, w.bond_percent / 100.0);
+                    self.roth
+                        .sell_with_goal_allocation(total_sales, w.bond_percent / 100.0);
                     self.grow_and_reinvest(r, self.expense_ratio);
                     self.roth.rebalance(w.bond_percent / 100.0);
                 }
@@ -168,7 +169,11 @@ impl Instance {
                     self.after_tax.capital_gains(),
                     self.after_tax.value()
                 );
-                let sell = how_much_to_sell(w.living_expenses, (self.income.id + self.income.pre_tax_withdrawal) / self.inflation, cg_ratio);
+                let sell = how_much_to_sell(
+                    w.living_expenses,
+                    (self.income.id + self.income.pre_tax_withdrawal) / self.inflation,
+                    cg_ratio,
+                );
                 assert!(sell >= 0.0, "sell = {}, cg_ratio = {}", sell, cg_ratio);
                 self.income.stocks_sold = sell * self.inflation;
                 self.income.cg = self.income.stocks_sold * cg_ratio;
@@ -198,13 +203,20 @@ impl Instance {
                 let mut target_values = self.value_by_account();
                 target_values.pre_tax -= self.income.pre_tax_withdrawal;
                 target_values.after_tax += self.income.stocks_bought - self.income.stocks_sold;
-                let target_allocations = goal_allocations(
-                    &target_values, w.bond_percent / 100.0
+                let target_allocations = goal_allocations(&target_values, w.bond_percent / 100.0);
+                self.pre_tax.sell_with_goal_allocation(
+                    self.income.pre_tax_withdrawal,
+                    target_allocations.pre_tax,
                 );
-                self.pre_tax.sell_with_goal_allocation(self.income.pre_tax_withdrawal, target_allocations.pre_tax);
                 // TODO: The capital gains may not match what we estimated above.
-                self.after_tax.sell_with_goal_allocation(self.income.stocks_sold, target_allocations.after_tax);
-                self.after_tax.invest_with_goal_allocation(self.income.stocks_bought, target_allocations.after_tax);
+                self.after_tax.sell_with_goal_allocation(
+                    self.income.stocks_sold,
+                    target_allocations.after_tax,
+                );
+                self.after_tax.invest_with_goal_allocation(
+                    self.income.stocks_bought,
+                    target_allocations.after_tax,
+                );
 
                 // Rebalance tax-advantaged accounts.
                 self.pre_tax.rebalance(target_allocations.pre_tax);
@@ -234,8 +246,7 @@ fn goal_allocations(v: &ValueByAccount, b: f64) -> ValueByAccount {
     } else {
         ValueByAccount {
             pre_tax: 1.0,
-            roth: (bond_goal - v.pre_tax - v.after_tax)
-                / v.roth,
+            roth: (bond_goal - v.pre_tax - v.after_tax) / v.roth,
             after_tax: 1.0,
         }
     }

@@ -191,10 +191,7 @@ impl Scenario<'_> {
         self.phases.iter().map(|x| x.years).sum()
     }
     pub fn success_ratio(&self) -> f64 {
-        self.instances
-            .iter()
-            .filter(|x| x.value() > 0.0)
-            .count() as f64
+        self.instances.iter().filter(|x| x.value() > 0.0).count() as f64
             / self.instances.len() as f64
     }
 }
