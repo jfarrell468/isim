@@ -36,12 +36,15 @@ impl Scenario<'_> {
             is.initial_balance.after_tax_cost_basis.unwrap_or(0.0),
         );
         for i in 0..RETURNS.len() {
-            s.instances.push((i, Instance::new(
-                pre_tax.clone(),
-                roth.clone(),
-                after_tax.clone(),
-                is.expense_ratio / 100.0,
-            )));
+            s.instances.push((
+                i,
+                Instance::new(
+                    pre_tax.clone(),
+                    roth.clone(),
+                    after_tax.clone(),
+                    is.expense_ratio / 100.0,
+                ),
+            ));
         }
         s
     }
@@ -115,7 +118,9 @@ impl Scenario<'_> {
                         .justify(Justify::Right)
                 }
                 ReportField::StartingYear(m) => match m {
-                    Measure::Median => RETURNS[self.instances[self.instances.len()/2].0].year.cell(),
+                    Measure::Median => RETURNS[self.instances[self.instances.len() / 2].0]
+                        .year
+                        .cell(),
                     Measure::Worst => RETURNS[self.instances[0].0].year.cell(),
                 },
                 ReportField::InterestAndDividends => cfmt(
