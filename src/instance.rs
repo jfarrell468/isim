@@ -9,8 +9,6 @@ use std::fmt::Debug;
 
 #[derive(Debug)]
 pub struct Instance {
-    // TODO: Remove start, and put it in scenario.
-    start: usize,
     cash: f64,
     pre_tax: Account,
     roth: Account,
@@ -45,14 +43,12 @@ pub struct ValueByAccount {
 
 impl Instance {
     pub fn new(
-        start: usize,
         pre_tax: Account,
         roth: Account,
         after_tax: Account,
         expense_ratio: f64,
     ) -> Instance {
         Instance {
-            start: start,
             cash: 0.0,
             pre_tax: pre_tax,
             roth: roth,
@@ -70,9 +66,6 @@ impl Instance {
                 taxes: 0.0,
             },
         }
-    }
-    pub fn start(&self) -> usize {
-        self.start
     }
     pub fn inflation_adjusted(&self, v: f64) -> f64 {
         v / self.inflation
@@ -351,7 +344,6 @@ mod instance_tests {
     #[test]
     fn goal_allocations() {
         let instance = Instance::new(
-            0,
             Account::new(50.0, 50.0),
             Account::new(50.0, 50.0),
             Account::new(50.0, 50.0),
@@ -376,7 +368,6 @@ mod instance_tests {
     #[test]
     fn grow_and_reinvest() {
         let mut instance = Instance::new(
-            0,
             Account::new(50.0, 50.0),
             Account::new(100.0, 0.0),
             Account::new(90.0, 10.0),
@@ -406,7 +397,6 @@ mod instance_tests {
     #[test]
     fn contribute() {
         let mut instance = Instance::new(
-            0,
             Account::new(0.0, 0.0),
             Account::new(0.0, 0.0),
             Account::new(0.0, 0.0),
@@ -435,5 +425,35 @@ mod instance_tests {
                 after_tax: 0.0
             }
         )
+    }
+
+    #[test]
+    fn withdraw_after_tax() {
+        let mut instance = Instance::new(
+            Account::new(50.0, 50.0),
+            Account::new(0.0, 0.0),
+            Account::new_with_basis(100.0, 50.0, 0.0, 0.0),
+            0.0,
+        );
+        assert_eq!(instance.value(), 200.0);
+        let income = instance.withdraw(50.0, 0.25);
+        assert_eq!(instance.value(), 150.0);
+        assert_eq!(income.0, 0.0);
+        assert_eq!(income.1, 25.0);
+    }
+
+    #[test]
+    fn withdraw_pre_tax() {
+        let mut instance = Instance::new(
+            Account::new(50.0, 50.0),
+            Account::new(0.0, 0.0),
+            Account::new_with_basis(100.0, 50.0, 0.0, 0.0),
+            0.0,
+        );
+        assert_eq!(instance.value(), 200.0);
+        let income = instance.withdraw(150.0, 0.25);
+        assert_eq!(instance.value(), 50.0);
+        assert_eq!(income.0, 50.0);
+        assert_eq!(income.1, 50.0);
     }
 }

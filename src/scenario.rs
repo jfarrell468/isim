@@ -16,7 +16,7 @@ use std::fmt::Debug;
 #[derive(Debug)]
 pub struct Scenario<'a> {
     year: usize,
-    instances: Vec<Instance>,
+    instances: Vec<(usize, Instance)>,
     phases: &'a Vec<Phase>,
     report: Report<'a>,
 }
@@ -36,13 +36,12 @@ impl Scenario<'_> {
             is.initial_balance.after_tax_cost_basis.unwrap_or(0.0),
         );
         for i in 0..RETURNS.len() {
-            s.instances.push(Instance::new(
-                i,
+            s.instances.push((i, Instance::new(
                 pre_tax.clone(),
                 roth.clone(),
                 after_tax.clone(),
                 is.expense_ratio / 100.0,
-            ));
+            )));
         }
         s
     }
@@ -61,20 +60,17 @@ impl Scenario<'_> {
     fn next(&mut self, i: usize) -> usize {
         let c = &self.phases[i].config;
         let y = self.year;
-        self.instances.retain(|x| x.start() + y < RETURNS.len());
+        self.instances.retain(|x| x.0 + y < RETURNS.len());
         for i in &mut self.instances {
-            i.next(y, c, &RETURNS[self.year + i.start()]);
+            i.1.next(y, c, &RETURNS[self.year + i.0]);
         }
         self.year += 1;
         self.instances.sort_by(|a, b| {
-            (a.inflation_adjusted(a.value()))
-                .partial_cmp(&b.inflation_adjusted(b.value()))
+            (a.1.inflation_adjusted(a.1.value()))
+                .partial_cmp(&b.1.inflation_adjusted(b.1.value()))
                 .unwrap()
         });
         self.instances.len()
-    }
-    fn starting_year(&self, i: &Instance) -> i32 {
-        RETURNS[i.start()].year
     }
     fn row(&self) -> Vec<cli_table::CellStruct> {
         let mut r: Vec<cli_table::CellStruct> = Vec::new();
@@ -119,8 +115,8 @@ impl Scenario<'_> {
                         .justify(Justify::Right)
                 }
                 ReportField::StartingYear(m) => match m {
-                    Measure::Median => self.starting_year(self.median_instance()).cell(),
-                    Measure::Worst => self.starting_year(self.worst_instance()).cell(),
+                    Measure::Median => RETURNS[self.instances[self.instances.len()/2].0].year.cell(),
+                    Measure::Worst => RETURNS[self.instances[0].0].year.cell(),
                 },
                 ReportField::InterestAndDividends => cfmt(
                     self.median_instance()
@@ -177,25 +173,25 @@ impl Scenario<'_> {
     }
     pub fn worst_starting_years(&self) -> [i32; 3] {
         [
-            self.starting_year(&self.instances[0]),
-            self.starting_year(&self.instances[1]),
-            self.starting_year(&self.instances[2]),
+            RETURNS[self.instances[0].0].year,
+            RETURNS[self.instances[1].0].year,
+            RETURNS[self.instances[2].0].year,
         ]
     }
     pub fn years_elapsed(&self) -> usize {
         self.year
     }
     pub fn median_instance(&self) -> &Instance {
-        &self.instances[self.instances.len() / 2]
+        &self.instances[self.instances.len() / 2].1
     }
     pub fn worst_instance(&self) -> &Instance {
-        &self.instances[0]
+        &self.instances[0].1
     }
     pub fn length_years(&self) -> usize {
         self.phases.iter().map(|x| x.years).sum()
     }
     pub fn success_ratio(&self) -> f64 {
-        self.instances.iter().filter(|x| x.value() > 0.0).count() as f64
+        self.instances.iter().filter(|x| x.1.value() > 0.0).count() as f64
             / self.instances.len() as f64
     }
 }
