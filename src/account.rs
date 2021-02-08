@@ -45,10 +45,21 @@ impl Account {
         self.stocks.value + self.bonds.value
     }
     pub fn bond_fraction(&self) -> f64 {
-        self.bonds.value / self.value()
+        if self.value() > 0.0 {
+            self.bonds.value / self.value()
+        } else {
+            0.0
+        }
     }
     pub fn capital_gains(&self) -> f64 {
         self.stocks.capital_gains() + self.bonds.capital_gains()
+    }
+    pub fn capital_gains_fraction(&self) -> f64 {
+        if self.value() > 0.0 {
+            self.capital_gains() / self.value()
+        } else {
+            0.0
+        }
     }
 
     // Market growth methods. All return interest and dividends.
@@ -130,9 +141,14 @@ impl Account {
     // so the desired bond fraction may not be achievable.
     pub fn sell_with_goal_allocation(&mut self, a: f64, b: f64) -> f64 {
         assert!(a >= 0.0);
-        assert!(a <= self.value());
-        assert!(b >= 0.0);
-        assert!(b <= 1.0);
+        assert!(
+            a <= self.value(),
+            "Trying to sell {} but only have {}",
+            a,
+            self.value()
+        );
+        assert!(b >= 0.0, "bond fraction should be >= 0 but was {}", b);
+        assert!(b <= 1.0, "bond fraction should be <= 1 but was {}", b);
         let bond_goal = (self.value() - a) * b;
         let stock_goal = self.value() - a - bond_goal;
         self.stocks
@@ -413,5 +429,14 @@ mod account_tests {
         assert_eq!(account.value(), 210.0);
         assert_eq!(account.stocks.value, 100.0);
         assert_eq!(account.bonds.value, 110.0);
+    }
+
+    #[test]
+    fn capital_gains_ratio() {
+        let account = Account::new_with_basis(0.0, 0.0, 0.0, 0.0);
+        assert_eq!(account.capital_gains_fraction(), 0.0);
+
+        let account = Account::new_with_basis(10.0, 0.0, 10.0, 10.0);
+        assert_eq!(account.capital_gains_fraction(), 0.5);
     }
 }

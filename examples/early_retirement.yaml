@@ -1,0 +1,86 @@
+# The fundamental equation of early retirement states:
+#
+# y = log_r (1 - (1-s)(1-r)/(sw))
+#
+# where
+#   y is years until financial independence
+#   r is the real rate of return on investments (r = 1.05 for 5% return)
+#   w is the safe withdrawal rate (w = 0.04 for 4% safe withdrawal)
+#   s is the fraction of net income saved (s = 0.4 when saving 40% of income after taxes)
+#
+# With 6% return, 4% safe withdrawal rate, and 50% savings rate, the equation
+# predicts y = 15.7 years of work.
+#
+# This figure does not account for taxes, however.
+#
+# This config simulates:
+# - $50k of savings, including pre-tax and Roth IRAs.
+# - $50k of expenses.
+# - A portfolio of 75% stocks.
+# - A person who starts who starts with no assets, and starts saving at age
+#   25.
+#
+# We find that if we work for 16 years, we run out of money 25% of the time
+# after 30 years of retirement. Working an extra 2 years boosts the success
+# rate to 98%.
+#
+# The worst starting years are 1956, 1957, 1958, meaning that we would have
+# retired around 1975. This suggests that high inflation around the time of
+# retirement is a significant risk.
+
+initial_balance:
+  pre_tax:
+    value: 0
+    bond_percent: 0
+  roth:
+    value: 0
+    bond_percent: 0
+  after_tax:
+    value: 0
+    bond_percent: 0
+  after_tax_cost_basis: 0
+phases:
+  - config:
+      Accumulation:
+#        pre_tax:
+#          value: 19500
+#          bond_percent: 50
+#        roth:
+#          value: 6000
+#          bond_percent: 0
+#        after_tax:
+#          value: 24500
+#          bond_percent: 0
+        pre_tax: 19500
+        roth: 6000
+        after_tax: 24500
+        target_bond_percent: 25.0
+    years: 18
+  - config:
+      WithdrawTaxAware:
+        living_expenses: 50000
+        birth_year: 1995
+        bond_percent: 25.0
+    years: 30
+expense_ratio: 0.025 # percent
+report:
+  - YearsElapsed
+  - SuccessRate
+  - Value:
+    - Median
+    - Total
+    - Real
+  - BondPercent: Total
+  - Value:
+    - Median
+    - AfterTax
+    - Real
+  - Value:
+    - Median
+    - PreTax
+    - Real
+  - Value:
+    - Median
+    - Roth
+    - Real
+  - WorstYears

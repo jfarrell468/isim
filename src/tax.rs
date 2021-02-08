@@ -156,6 +156,7 @@ fn fed_niit(i: f64, cg: f64) -> f64 {
 // appreciated such that cg_ratio (between 0 and 1) of their value is unrealized
 // capital gains.
 pub fn how_much_to_sell(l: f64, i: f64, cg_ratio: f64) -> f64 {
+    assert!(cg_ratio <= 1.0);
     let mut guess = (l - i).max(0.0);
     assert!(
         guess >= 0.0,
@@ -167,7 +168,7 @@ pub fn how_much_to_sell(l: f64, i: f64, cg_ratio: f64) -> f64 {
     );
     while i + guess - tax(i, guess * cg_ratio) < l {
         // Linear search in $1k increments. We can do better, but this is OK for now.
-        guess += 1000.0
+        guess += 1000.0;
     }
     guess
 }

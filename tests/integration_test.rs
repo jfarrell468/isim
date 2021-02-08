@@ -74,6 +74,23 @@ fn stock_growth() {
 }
 
 #[test]
+fn mixed_growth() {
+    let config = config("mixed_growth.yaml");
+    let mut scenario = Scenario::new(&config);
+    scenario.run();
+    let rv = scenario
+        .median_instance()
+        .inflation_adjusted(scenario.median_instance().value());
+    assert_eq!(rv.round(), 3364.0);
+    assert_eq!(scenario.length_years(), 20);
+    assert_eq_decimal_places!(
+        (rv / 1000.0).powf(1.0 / (scenario.length_years() as f64)),
+        1.063,
+        3
+    );
+}
+
+#[test]
 fn four_percent_rule() {
     let config = config("4_percent_rule.yaml");
     let mut scenario = Scenario::new(&config);

@@ -38,9 +38,10 @@ pub struct TaxAwareWithdrawal {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct YearlyContribution {
-    pub pre_tax: Allocation,
-    pub roth: Allocation,
-    pub after_tax: Allocation,
+    pub pre_tax: f64,
+    pub roth: f64,
+    pub after_tax: f64,
+    pub target_bond_percent: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

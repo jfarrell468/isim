@@ -129,12 +129,12 @@ impl Scenario<'_> {
                 .cell(),
                 ReportField::StocksSold => cfmt(
                     self.median_instance()
-                        .inflation_adjusted(self.median_instance().income.stocks_sold),
+                        .inflation_adjusted(self.median_instance().income.after_tax_sold),
                 )
                 .cell(),
                 ReportField::StocksBought => cfmt(
                     self.median_instance()
-                        .inflation_adjusted(self.median_instance().income.stocks_bought),
+                        .inflation_adjusted(self.median_instance().income.after_tax_bought),
                 )
                 .cell(),
                 ReportField::CapitalGains => cfmt(
@@ -145,7 +145,7 @@ impl Scenario<'_> {
                 ReportField::SuccessRate => pfmt(self.success_ratio()).cell(),
                 ReportField::RequiredMinimumDistribution => cfmt(
                     self.median_instance()
-                        .inflation_adjusted(self.median_instance().income.pre_tax_withdrawal),
+                        .inflation_adjusted(self.median_instance().income.rmd),
                 )
                 .cell(),
                 ReportField::Taxes => cfmt(
@@ -155,15 +155,19 @@ impl Scenario<'_> {
                 .cell(),
                 ReportField::TaxRate => {
                     let income = &self.median_instance().income;
-                    pfmt(income.taxes / (income.id + income.cg + income.pre_tax_withdrawal)).cell()
+                    pfmt(income.taxes / (income.id + income.cg + income.rmd + income.ira_sold))
+                        .cell()
                 }
                 ReportField::Cash => unimplemented!(),
                 ReportField::ExpensesDoubleCheck => {
                     let i = self.median_instance();
                     cfmt(i.inflation_adjusted(
-                        i.income.id + i.income.pre_tax_withdrawal + i.income.stocks_sold
+                        i.income.rmd
+                            + i.income.after_tax_sold
+                            + i.income.ira_sold
+                            + i.income.roth_sold
                             - i.income.taxes
-                            - i.income.stocks_bought,
+                            - i.income.after_tax_bought,
                     ))
                     .cell()
                 }

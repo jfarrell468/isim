@@ -1,0 +1,31 @@
+# Growth of a mixed portfolio of 75% stocks, 25% bonds.
+# Real growth rate is ~6%
+initial_balance:
+  pre_tax:
+    value: 0
+    bond_percent: 0
+  roth:
+    value: 1000
+    bond_percent: 25
+  after_tax:
+    value: 0
+    bond_percent: 0
+phases:
+- config:
+    SimpleWithdrawAndRebalance:
+      amount: 0
+      bond_percent: 25
+  years: 20
+expense_ratio: 0.025 # percent
+report:
+- YearsElapsed
+- Value:
+  - Median
+  - Total
+  - Real
+- BondPercent: Roth
+- Value:
+  - Worst
+  - Total
+  - Real
+- WorstYears
