@@ -1,5 +1,5 @@
 use crate::account::Account;
-use crate::config::{PhaseType, YearlyContribution};
+use crate::config::{PhaseType, SimpleWithdrawal, TaxAwareWithdrawal, YearlyContribution};
 use crate::histret::HistoricalYear;
 use crate::rmd::rmd_fraction;
 use crate::tax::tax;
@@ -167,102 +167,111 @@ impl Instance {
             taxes: 0.0,
         };
         match c {
-            PhaseType::Accumulation(contributions) => {
-                // TODO: Configure an overall target bond percent, and use that to determine
-                // allocations for each account.
-                self.grow_and_reinvest(r, self.expense_ratio);
-                self.contribute(contributions);
-                self.inflation *= 1.0 + r.inflation;
+            PhaseType::Accumulation(c) => {
+                self.accumulate(c, r);
             }
             PhaseType::Growth => {
-                self.grow_and_reinvest(r, self.expense_ratio);
-                self.inflation *= 1.0 + r.inflation;
+                self.accumulate(
+                    &YearlyContribution {
+                        pre_tax: 0.0,
+                        roth: 0.0,
+                        after_tax: 0.0,
+                        target_bond_percent: self.bond_fraction() * 100.0,
+                    },
+                    r,
+                );
             }
             PhaseType::SimpleWithdrawAndRebalance(w) => {
-                self.withdraw(w.amount * self.inflation, w.bond_percent / 100.0);
-                self.grow_and_reinvest(r, self.expense_ratio);
-                let allocations = self.goal_allocations(w.bond_percent / 100.0);
-                self.pre_tax.rebalance(allocations.pre_tax);
-                self.roth.rebalance(allocations.roth);
-                self.inflation *= 1.0 + r.inflation;
+                self.simple_withdraw_and_rebalance(w, r);
             }
             PhaseType::WithdrawTaxAware(w) => {
-                let b = w.bond_percent / 100.0;
-                let new_inflation = self.inflation * (1.0 + r.inflation);
-                let real_expenses = w.living_expenses * new_inflation;
-
-                // RMDs are calculated at the beginning of the year.
-                self.income.rmd = self.pre_tax.value()
-                    * rmd_fraction(Utc::now().year() - w.birth_year + y as i32);
-                self.pre_tax.sell_preserving_allocation(self.income.rmd);
-
-                // Market growth. After-tax interest and dividends.
-                self.income.id = self.grow_and_reinvest(r, self.expense_ratio);
-
-                // TODO: Roth conversion.
-
-                // Invest any money we have left over. Or, sell more to make up expenses.
-                self.income.taxes =
-                    new_inflation * tax((self.income.rmd + self.income.id) / new_inflation, 0.0);
-                let money_left = self.income.rmd - self.income.taxes - real_expenses;
-                self.income.after_tax_bought = money_left.max(0.0);
-                if money_left >= 0.0 {
-                    // We have money left over. Invest it in our after-tax account.
-                    self.after_tax.invest_with_goal_allocation(
-                        self.income.after_tax_bought,
-                        goal_allocations(
-                            &ValueByAccount {
-                                pre_tax: self.pre_tax.value(),
-                                roth: self.roth.value(),
-                                after_tax: self.after_tax.value() + self.income.after_tax_bought,
-                            },
-                            b,
-                        )
-                        .after_tax,
-                    );
-                } else {
-                    let mut raw_guess = -money_left;
-                    let mut guess = self.allocate_withdrawals(raw_guess);
-                    self.income.taxes = new_inflation
-                        * tax(
-                            (self.income.rmd + self.income.id + guess.pre_tax) / new_inflation,
-                            guess.after_tax * self.after_tax.capital_gains_fraction(),
-                        );
-                    while raw_guess < self.value()
-                        && guess.after_tax + guess.pre_tax + guess.roth + self.income.rmd
-                            - self.income.taxes
-                            < real_expenses
-                    {
-                        raw_guess += 1000.0;
-                        guess = self.allocate_withdrawals(raw_guess);
-                        self.income.taxes = new_inflation
-                            * tax(
-                                (self.income.rmd + self.income.id + guess.pre_tax) / new_inflation,
-                                guess.after_tax * self.after_tax.capital_gains_fraction()
-                                    / new_inflation,
-                            );
-                    }
-                    let foo = self.withdraw(raw_guess, b);
-                    self.income.ira_sold = foo.0;
-                    self.income.cg = foo.1;
-                    self.income.after_tax_sold = guess.after_tax;
-                    self.income.roth_sold = guess.roth;
-                    self.income.taxes = new_inflation
-                        * tax(
-                            (self.income.rmd + self.income.id + self.income.ira_sold)
-                                / new_inflation,
-                            self.income.cg / new_inflation,
-                        );
-                }
-
-                // Rebalance tax-advantaged accounts.
-                let target_allocations = self.goal_allocations(b);
-                self.pre_tax.rebalance(target_allocations.pre_tax);
-                self.roth.rebalance(target_allocations.roth);
-
-                self.inflation *= 1.0 + r.inflation;
+                self.withdraw_tax_aware(w, r, Utc::now().year() - w.birth_year + y as i32);
             }
         }
+        self.inflation *= 1.0 + r.inflation;
+    }
+    fn accumulate(&mut self, c: &YearlyContribution, r: &HistoricalYear) {
+        self.grow_and_reinvest(r, self.expense_ratio);
+        self.contribute(c);
+    }
+    fn simple_withdraw_and_rebalance(&mut self, w: &SimpleWithdrawal, r: &HistoricalYear) {
+        self.withdraw(w.amount * self.inflation, w.bond_percent / 100.0);
+        self.grow_and_reinvest(r, self.expense_ratio);
+        let allocations = self.goal_allocations(w.bond_percent / 100.0);
+        self.pre_tax.rebalance(allocations.pre_tax);
+        self.roth.rebalance(allocations.roth);
+    }
+    fn withdraw_tax_aware(&mut self, w: &TaxAwareWithdrawal, r: &HistoricalYear, age: i32) {
+        let b = w.bond_percent / 100.0;
+        let new_inflation = self.inflation * (1.0 + r.inflation);
+        let real_expenses = w.living_expenses * new_inflation;
+
+        // RMDs are calculated at the beginning of the year.
+        self.income.rmd = self.pre_tax.value() * rmd_fraction(age);
+        self.pre_tax.sell_preserving_allocation(self.income.rmd);
+
+        // Market growth. After-tax interest and dividends.
+        self.income.id = self.grow_and_reinvest(r, self.expense_ratio);
+
+        // TODO: Roth conversion.
+
+        // Invest any money we have left over. Or, sell more to make up expenses.
+        self.income.taxes =
+            new_inflation * tax((self.income.rmd + self.income.id) / new_inflation, 0.0);
+        let money_left = self.income.rmd - self.income.taxes - real_expenses;
+        self.income.after_tax_bought = money_left.max(0.0);
+        if money_left >= 0.0 {
+            // We have money left over. Invest it in our after-tax account.
+            self.after_tax.invest_with_goal_allocation(
+                self.income.after_tax_bought,
+                goal_allocations(
+                    &ValueByAccount {
+                        pre_tax: self.pre_tax.value(),
+                        roth: self.roth.value(),
+                        after_tax: self.after_tax.value() + self.income.after_tax_bought,
+                    },
+                    b,
+                )
+                .after_tax,
+            );
+        } else {
+            // RMDs aren't enough. Sell some assets.
+            let mut raw_guess = -money_left;
+            let mut guess = self.allocate_withdrawals(raw_guess);
+            self.income.taxes = new_inflation
+                * tax(
+                    (self.income.rmd + self.income.id + guess.pre_tax) / new_inflation,
+                    guess.after_tax * self.after_tax.capital_gains_fraction(),
+                );
+            while raw_guess < self.value()
+                && guess.after_tax + guess.pre_tax + guess.roth + self.income.rmd
+                    - self.income.taxes
+                    < real_expenses
+            {
+                raw_guess += 1000.0;
+                guess = self.allocate_withdrawals(raw_guess);
+                self.income.taxes = new_inflation
+                    * tax(
+                        (self.income.rmd + self.income.id + guess.pre_tax) / new_inflation,
+                        guess.after_tax * self.after_tax.capital_gains_fraction() / new_inflation,
+                    );
+            }
+            let foo = self.withdraw(raw_guess, b);
+            self.income.ira_sold = foo.0;
+            self.income.cg = foo.1;
+            self.income.after_tax_sold = guess.after_tax;
+            self.income.roth_sold = guess.roth;
+            self.income.taxes = new_inflation
+                * tax(
+                    (self.income.rmd + self.income.id + self.income.ira_sold) / new_inflation,
+                    self.income.cg / new_inflation,
+                );
+        }
+
+        // Rebalance tax-advantaged accounts.
+        let target_allocations = self.goal_allocations(b);
+        self.pre_tax.rebalance(target_allocations.pre_tax);
+        self.roth.rebalance(target_allocations.roth);
     }
 }
 
@@ -338,8 +347,11 @@ fn allocate_withdrawals(v: &ValueByAccount, a: f64) -> ValueByAccount {
 
 #[cfg(test)]
 mod instance_tests {
+    #[cfg(test)]
     use crate::asset::AssetReturn;
     use crate::instance::*;
+    #[cfg(test)]
+    use crate::{assert_eq_cents, assert_eq_decimal_places};
 
     #[test]
     fn goal_allocations() {
@@ -455,5 +467,106 @@ mod instance_tests {
         assert_eq!(instance.value(), 50.0);
         assert_eq!(income.0, 50.0);
         assert_eq!(income.1, 50.0);
+    }
+
+    #[test]
+    fn accumulation() {
+        let mut instance = Instance::new(
+            Account::new(0.0, 0.0),
+            Account::new(0.0, 0.0),
+            Account::new(0.0, 0.0),
+            0.0,
+        );
+        instance.accumulate(
+            &YearlyContribution {
+                pre_tax: 100.0,
+                roth: 200.0,
+                after_tax: 300.0,
+                target_bond_percent: 10.0,
+            },
+            &HistoricalYear {
+                year: 0,
+                stocks: AssetReturn { cg: 0.05, id: 0.02 },
+                tbonds: AssetReturn { cg: 0.0, id: 0.04 },
+                aaabonds: AssetReturn { cg: 0.0, id: 0.0 },
+                inflation: 0.00,
+            },
+        );
+        assert_eq!(instance.value(), 600.0);
+        assert_eq!(
+            instance.value_by_account(),
+            ValueByAccount {
+                pre_tax: 100.0,
+                roth: 200.0,
+                after_tax: 300.0
+            }
+        );
+        assert_eq!(instance.bond_fraction(), 0.1);
+        assert_eq!(
+            instance.bond_fraction_by_account(),
+            ValueByAccount {
+                pre_tax: 0.6,
+                roth: 0.0,
+                after_tax: 0.0
+            }
+        );
+        instance.accumulate(
+            &YearlyContribution {
+                pre_tax: 100.0,
+                roth: 200.0,
+                after_tax: 300.0,
+                target_bond_percent: 10.0,
+            },
+            &HistoricalYear {
+                year: 0,
+                stocks: AssetReturn { cg: 0.05, id: 0.02 },
+                tbonds: AssetReturn { cg: 0.0, id: 0.04 },
+                aaabonds: AssetReturn { cg: 0.0, id: 0.0 },
+                inflation: 0.00,
+            },
+        );
+        assert_eq!(instance.value(), 1240.2);
+        assert_eq!(
+            instance.value_by_account(),
+            ValueByAccount {
+                pre_tax: 205.2,
+                roth: 414.0,
+                after_tax: 621.0
+            }
+        );
+        assert_eq!(instance.bond_fraction(), 0.1);
+        let bf = instance.bond_fraction_by_account();
+        assert_eq_decimal_places!(bf.pre_tax, 124.02 / 205.2, 4);
+        assert_eq!(bf.roth, 0.0);
+        assert_eq!(bf.after_tax, 0.0);
+    }
+
+    #[test]
+    fn simple_withdraw_and_rebalance() {
+        let mut instance = Instance::new(
+            Account::new(50.0, 50.0),
+            Account::new(100.0, 0.0),
+            Account::new(100.0, 0.0),
+            0.0,
+        );
+        instance.simple_withdraw_and_rebalance(
+            &SimpleWithdrawal {
+                amount: 150.0,
+                bond_percent: 20.0,
+            },
+            &HistoricalYear {
+                year: 0,
+                stocks: AssetReturn { cg: 0.05, id: 0.02 },
+                tbonds: AssetReturn { cg: 0.0, id: 0.04 },
+                aaabonds: AssetReturn { cg: 0.0, id: 0.0 },
+                inflation: 0.00,
+            },
+        );
+        assert_eq_cents!(instance.value(), 159.6);
+        let v = instance.value_by_account();
+        assert_eq_cents!(v.pre_tax, 30.0 * 1.04 + 20.0 * 1.07);
+        assert_eq!(v.roth, 107.0);
+        assert_eq!(v.after_tax, 0.0);
+        assert_eq!(instance.bond_fraction(), 0.2);
     }
 }
