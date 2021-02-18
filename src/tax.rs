@@ -20,13 +20,35 @@ pub fn tax(i: f64, cg: f64) -> f64 {
     ill + fed
 }
 
-fn illinois(i: f64, cg: f64) -> f64 {
-    let income = i + cg;
-    if income <= 500_000.0 {
-        0.0495 * (income - 2.0 * 2325.0).max(0.0)
-    } else {
-        0.0495 * income
+// Calculates marginal rate for income.
+fn marginal_rate(i: f64, cg: f64) -> f64 {
+    tax(i + 1.0, cg) - tax(i, cg)
+}
+
+// Calculates the approximate greatest income for which the marginal tax rate is less than r.
+// It will under-estimate the correct upper limit by no more than $100.
+fn marginal_rate_to_income(r: f64) -> Option<f64> {
+    let mut low = 0.0;
+    let mut high = 1_000_000.0;
+    if r < marginal_rate(low, 0.0) || r > marginal_rate(high, 0.0) {
+        return Option::None;
     }
+    loop {
+        if high - low < 100.0 {
+            return Some(low);
+        }
+        let guess = (low + high) / 2.0;
+        let mr = marginal_rate(guess, 0.0);
+        if r < mr {
+            high = guess;
+        } else {
+            low = guess;
+        }
+    }
+}
+
+fn illinois(i: f64, cg: f64) -> f64 {
+    0.0495 * (i + cg.max(0.0))
 }
 
 fn federal(i: f64, cg: f64) -> f64 {
@@ -176,36 +198,29 @@ pub fn how_much_to_sell(l: f64, i: f64, cg_ratio: f64) -> f64 {
 mod tax_tests {
     #[cfg(test)]
     use super::*;
+    #[cfg(test)]
+    use crate::{assert_eq_cents, assert_eq_decimal_places};
 
     #[test]
-    pub fn tax_test() {
-        assert_eq!(
-            (100.0 * illinois(50_000.0, 75_000.0)).round() / 100.0,
-            5_957.33
-        );
+    fn tax_test() {
+        assert_eq_cents!(illinois(50_000.0, 75_000.0), 6187.5);
         assert_eq!(fed_income(50_000.0), 2_629.0);
         assert_eq!(fed_cg(50_000.0, 75_000.0), 6_750.0);
         assert_eq!(fed_niit(50_000.0, 75_000.0), 0.0);
-        assert_eq!(
-            (100.0 * tax(50_000.0, 75_000.0)).round() / 100.0,
-            5_957.33 + 2_629.0 + 6_750.0
-        );
+        assert_eq_cents!(tax(50_000.0, 75_000.0), 6187.5 + 2_629.0 + 6_750.0);
     }
 
     #[test]
-    pub fn illinois_test() {
+    fn illinois_test() {
         assert_eq!(illinois(0.0, 0.0), 0.0);
-        assert_eq!(illinois(100.0, 0.0), 0.0);
-        assert_eq!(illinois(0.0, 100.0), 0.0);
-        assert_eq!(
-            (100.0 * illinois(25_000.0, 25_000.0)).round() / 100.0,
-            2244.83
-        );
+        assert_eq!(illinois(100.0, 0.0), 4.95);
+        assert_eq!(illinois(0.0, 100.0), 4.95);
+        assert_eq_cents!(illinois(25_000.0, 25_000.0), 2475.0);
         assert_eq!(illinois(501_000.0, 0.0), 24_799.5);
     }
 
     #[test]
-    pub fn fed_income_test() {
+    fn fed_income_test() {
         assert_eq!(fed_income(20_000.0), 0.0);
         assert_eq!(fed_income(24_800.0 + 1000.0), 100.0);
         assert_eq!(fed_income(50_000.0), 2_629.0);
@@ -217,7 +232,7 @@ mod tax_tests {
     }
 
     #[test]
-    pub fn fed_cg_test() {
+    fn fed_cg_test() {
         assert_eq!(fed_cg(0.0, 20_000.0), 0.0);
         assert_eq!(fed_cg(80_000.0, 20_000.0), 3_000.0);
         assert_eq!(fed_cg(400_000.0, 100.0), 15.00);
@@ -227,13 +242,24 @@ mod tax_tests {
     }
 
     #[test]
-    pub fn fed_niit_test() {
+    fn fed_niit_test() {
         assert_eq!(fed_niit(100_000.0, 100_000.0), 0.0);
         assert_eq!(fed_niit(130_000.0, 130_000.0), 380.0);
     }
 
     #[test]
-    pub fn how_much_to_sell_test() {
-        assert_eq!(how_much_to_sell(180_000.0, 50_000.0, 0.5), 145_000.0);
+    fn how_much_to_sell_test() {
+        assert_eq!(how_much_to_sell(180_000.0, 50_000.0, 0.5), 146_000.0);
+    }
+
+    #[test]
+    fn marginal_rate_test() {
+        assert_eq_decimal_places!(marginal_rate(200_000.0, 10_000.0), 0.2895, 4);
+        assert_eq_decimal_places!(marginal_rate(250_000.0, 0.0), 0.3275, 4);
+    }
+
+    #[test]
+    fn marginal_rate_to_income_test() {
+        assert_eq_decimal_places!(marginal_rate_to_income(0.3).unwrap(), 249939.0, 0);
     }
 }

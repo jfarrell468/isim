@@ -96,3 +96,10 @@ fn four_percent_rule() {
     let mut scenario = Scenario::new(&config);
     scenario.run();
 }
+
+#[test]
+fn early_retirement() {
+    let config = config("early_retirement.yaml");
+    let mut scenario = Scenario::new(&config);
+    scenario.run();
+}
